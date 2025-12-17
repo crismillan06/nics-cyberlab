@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
 # =============================================
-# 🔧 Script para cargar entorno y levantar la red
+# Script para cargar entorno y levantar la red
 # =============================================
+
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_DIR="${BASE_DIR}/deploy"
 
 echo "🔹 Activando entorno virtual de OpenStack..."
 step_start=$(date +%s)
-if [[ -d "openstack-installer/openstack_venv" ]]; then
-    source openstack-installer/openstack_venv/bin/activate
+
+if [[ -d "${DEPLOY_DIR}/openstack_venv" ]]; then
+    source "${DEPLOY_DIR}/openstack_venv/bin/activate"
     echo "[✔] Entorno virtual 'openstack_venv' activado correctamente."
 else
     echo "[✖] No se encontró el entorno 'openstack_venv'."
     exit 1
 fi
+
 step_end=$(date +%s)
 echo "-------------------------------------------"
 sleep 1
 
 # ===== Cargar variables de entorno OpenStack =====
-if [[ -f "admin-openrc.sh" ]]; then
+if [[ -f "${BASE_DIR}/admin-openrc.sh" ]]; then
     echo "[+] Cargando variables del entorno OpenStack (admin-openrc.sh)..."
-    source admin-openrc.sh
+    source "${BASE_DIR}/admin-openrc.sh"
     echo "[✔] Variables cargadas correctamente."
     echo "-------------------------------------------"
     sleep 1
@@ -30,5 +35,4 @@ fi
 
 echo "==================================================================="
 echo "🔹 Construyendo reglas de iptables para el correcto funcionamiento de la red..."
-sudo bash openstack-installer/setup-veth.sh
-
+sudo bash "${DEPLOY_DIR}/setup-veth.sh"
