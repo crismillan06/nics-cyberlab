@@ -9,7 +9,7 @@ set -euo pipefail
 
 KOLLA_CLOUDS="/etc/kolla/clouds.yaml"
 TMP_JSON="/tmp/clouds.json"
-OUTPUT_FILE="admin-openrc.sh"
+OUTPUT_FILE="../admin-openrc.sh"
 CLOUD_NAME="kolla-admin"
 USER_NAME=$(whoami)
 

@@ -40,27 +40,22 @@ sudo apt install -y git iptables bridge-utils wget curl dbus pkg-config \
 cmake build-essential libdbus-1-dev libglib2.0-dev sudo gnupg \
 apt-transport-https ca-certificates software-properties-common
 
-python -m pip install dbus-python docker
+python -m pip install --no-cache-dir dbus-python docker
 
 # ============================================================
 # 3️⃣ CONFIGURACIÓN DOCKER
 # ============================================================
 echo "🔹 Configurando Docker..."
-
-# Crear carpeta para keyrings si no existe
 sudo mkdir -p /etc/apt/keyrings
 
 DOCKER_KEYRING="/etc/apt/keyrings/docker.gpg"
-
-# Descargar la clave GPG
 if [ ! -f "$DOCKER_KEYRING" ]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o "$DOCKER_KEYRING"
     echo "[✔] Clave GPG de Docker descargada."
 else
-    echo "[✔] Clave GPG de Docker ya existe, se omite descarga."
+    echo "[✔] Clave GPG de Docker ya existe."
 fi
 
-# Configurar el repositorio con clave correcta
 ARCH=$(dpkg --print-architecture)
 DISTRO=$(lsb_release -cs)
 REPO_FILE="/etc/apt/sources.list.d/docker.list"
@@ -70,14 +65,12 @@ if [ ! -f "$REPO_FILE" ]; then
     sudo tee "$REPO_FILE"
     echo "[✔] Repositorio Docker añadido."
 else
-    echo "[✔] Repositorio Docker ya existe, se omite."
+    echo "[✔] Repositorio Docker ya existe."
 fi
 
-# Actualizar apt y instalar Docker
 sudo apt update -y
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-# Activar Docker y añadir usuario al grupo
 sudo systemctl enable docker --now
 sudo usermod -aG docker "$USER"
 
@@ -87,7 +80,7 @@ echo "[✔] Docker configurado correctamente."
 # 4️⃣ KOLLA-ANSIBLE Y DEPENDENCIAS PYTHON
 # ============================================================
 echo "🔹 Instalando dependencias Python y Kolla-Ansible..."
-REQ_FILE="requirements.txt"
+REQ_FILE="$SCRIPT_DIR/requirements.txt"
 cat << 'EOF' > "$REQ_FILE"
 ansible==11.5.0
 ansible-core==2.18.5
@@ -153,7 +146,6 @@ python-openstackclient==8.0.0
 python-socketio==5.14.1
 PyYAML==6.0.2
 requests==2.32.3
-requestsexceptions==1.4.0
 resolvelib==0.8.1
 rfc3986==2.0.0
 setuptools==80.4.0
@@ -168,7 +160,7 @@ wrapt==1.17.2
 wsproto==1.2.0
 EOF
 
-pip install -r "$REQ_FILE" --no-cache-dir || { echo "❌ Fallo en instalación Python packages"; exit 1; }
+pip install --no-cache-dir -r "$REQ_FILE" || { echo "❌ Fallo en instalación Python packages"; exit 1; }
 
 echo "[✔] Dependencias Python instaladas correctamente."
 
@@ -240,7 +232,6 @@ ansible-galaxy collection install \
   openstack.cloud --collections-path ~/.ansible/collections
 
 MODPROBE_FILE=~/.ansible/collections/ansible_collections/ansible/posix/plugins/modules/modprobe.py
-if [ ! -f "$MODPROBE_FILE" ]; then
 mkdir -p "$(dirname "$MODPROBE_FILE")"
 cat << 'EOF' > "$MODPROBE_FILE"
 #!/usr/bin/python
@@ -263,7 +254,6 @@ if __name__ == '__main__':
     main()
 EOF
 chmod +x "$MODPROBE_FILE"
-fi
 
 echo "[✔] Colecciones Ansible y fix de modprobe configurados."
 
