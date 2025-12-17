@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 # ======================================================
-# Generador automático de admin-openrc.sh desde /etc/kolla/clouds.yaml
-# ------------------------------------------------------
-# bash generate_app_cred_openrc_from_clouds.sh 2>&1 | tee log_generate_openrc.log
+# Generador de admin-openrc.sh desde /etc/kolla/clouds.yaml
 # ======================================================
 
 set -euo pipefail
 
 KOLLA_CLOUDS="/etc/kolla/clouds.yaml"
 TMP_JSON="/tmp/clouds.json"
-OUTPUT_FILE="../admin-openrc.sh"
+OUTPUT_FILE="admin-openrc.sh"
 CLOUD_NAME="kolla-admin"
 USER_NAME=$(whoami)
 
@@ -123,7 +121,8 @@ EOF
 
 chmod +x "$OUTPUT_FILE"
 chown "$USER_NAME:$USER_NAME" "$OUTPUT_FILE"
-source admin-openrc.sh
+source "$OUTPUT_FILE"
+
 echo "[✔] Archivo '$OUTPUT_FILE' generado correctamente y con permisos correctos."
 
 echo "Contenido:"
