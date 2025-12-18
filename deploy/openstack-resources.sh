@@ -255,24 +255,29 @@ fi
 
 echo "[+] Configurando reglas de seguridad..."
 
+add_rule() {
+  local proto=$1
+  local port=$2
+
+  # Comprobamos si ya existe la regla
+  if ! openstack security group rule list "$SEC_GROUP" -f value \
+       -c "IP Protocol" -c "Port Range" | grep -qE "^$proto\s+$port:$port$"; then
+    echo "[+] Añadiendo regla $proto para puerto $port..."
+    run_or_die openstack security group rule create --proto "$proto" --dst-port "$port" "$SEC_GROUP"
+    echo "[✔] Regla $proto aplicada: $port"
+  else
+    echo "[✔] Regla $proto existente: $port"
+  fi
+}
+
 # TCP
 for p in "${RULES_TCP[@]}"; do
-  if ! openstack security group rule list "$SEC_GROUP" -f value \
-      -c "Port Range" -c "IP Protocol" | grep -q "^$p:$p tcp$"; then
-    echo "[+] Añadiendo regla TCP para puerto $p..."
-    run_or_die openstack security group rule create --proto tcp --dst-port "$p" "$SEC_GROUP"
-    echo "[✔] Regla TCP aplicada: $p"
-  fi
+  add_rule tcp "$p"
 done
 
 # UDP
 for p in "${RULES_UDP[@]}"; do
-  if ! openstack security group rule list "$SEC_GROUP" -f value \
-      -c "Port Range" -c "IP Protocol" | grep -q "^$p:$p udp$"; then
-    echo "[+] Añadiendo regla UDP para puerto $p..."
-    run_or_die openstack security group rule create --proto udp --dst-port "$p" "$SEC_GROUP"
-    echo "[✔] Regla UDP aplicada: $p"
-  fi
+  add_rule udp "$p"
 done
 
 # ICMP
@@ -280,22 +285,34 @@ if ! openstack security group rule list "$SEC_GROUP" -f value -c "IP Protocol" |
   echo "[+] Añadiendo regla ICMP..."
   run_or_die openstack security group rule create --proto icmp "$SEC_GROUP"
   echo "[✔] Regla ICMP aplicada"
+else
+  echo "[✔] Regla ICMP existente"
 fi
 
 # ==============================================
 # KEYPAIR
 # ==============================================
-echo "🔹 Gestionando keypair..."
+echo "🔹 Gestionando keypair (.pem)..."
 
-openstack keypair delete "$KEYPAIR" 2>/dev/null || true
-rm -f "$KEYPAIR_PRIV_FILE" "$KEYPAIR_PUB_FILE"
+if openstack keypair show "$KEYPAIR" &>/dev/null; then
+    echo "[!] Keypair '$KEYPAIR' ya existe. Eliminando..."
+    openstack keypair delete "$KEYPAIR"
+fi
 
-ssh-keygen -t rsa -b 4096 -m PEM -f "$KEYPAIR_PRIV_FILE" -N "" &>/dev/null
+if [[ -f "$KEYPAIR_PRIV_FILE" ]]; then rm -f "$KEYPAIR_PRIV_FILE"; fi
+if [[ -f "$KEYPAIR_PUB_FILE" ]]; then rm -f "$KEYPAIR_PUB_FILE"; fi
+
+echo "[+] Generando nuevo par de claves..."
+ssh-keygen -t rsa -b 4096 -m PEM \
+    -f "$KEYPAIR_PRIV_FILE" -N "" -C "key for OpenStack"
+
 chmod 400 "$KEYPAIR_PRIV_FILE"
 chmod 644 "$KEYPAIR_PUB_FILE"
 
 openstack keypair create --public-key "$KEYPAIR_PUB_FILE" "$KEYPAIR" &>/dev/null
-echo "[✔] Keypair listo"
+echo "[✔] Keypair creado correctamente:"
+echo "    Privada: $KEYPAIR_PRIV_FILE"
+echo "    Pública: $KEYPAIR_PUB_FILE"
 echo "-------------------------------------------"
 
 # ==============================================
@@ -304,16 +321,18 @@ echo "-------------------------------------------"
 echo "🔹 Comprobando cloud-init..."
 
 if [ ! -f "$PASS_FILE" ]; then
-  echo "[+] Creando fichero cloud-init"
+  echo "[+] Creando fichero cloud-init..."
   cat > "$PASS_FILE" <<EOF
 #cloud-config
 password: nics2025!
 chpasswd: { expire: False }
 ssh_pwauth: True
 EOF
+  echo "[✔] Fichero cloud-init generado en: $PASS_FILE"
 else
-  echo "[✔] Fichero cloud-init existente"
+  echo "[✔] Fichero cloud-init existente en: $PASS_FILE"
 fi
+echo "-------------------------------------------"
 
 # ==============================================
 # FINAL
