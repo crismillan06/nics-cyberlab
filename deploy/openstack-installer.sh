@@ -117,7 +117,7 @@ jmespath==1.0.1
 jsonpatch==1.33
 jsonpointer==3.0.0
 keystoneauth1==5.10.0
-kolla-ansible @ git+https://opendev.org/openstack/kolla-ansible@master
+kolla-ansible==21.0.0
 MarkupSafe==3.0.2
 msgpack==1.1.0
 netaddr==1.3.0
