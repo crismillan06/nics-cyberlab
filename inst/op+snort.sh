@@ -189,8 +189,10 @@ alert_fast = { file = true }
 outputs = { alert_fast }
 EOL
 
+# === Reglas locales (ICMP + Nmap SYN scan) ===
 sudo tee /etc/snort/rules/local.rules > /dev/null <<'EOL'
 alert icmp any any -> any any (msg:"Intento ICMPv4 detectado"; sid:1000010; rev:1;)
+alert tcp any any -> any any (msg:"Nmap TCP SYN scan"; flow:stateless; flags:S; detection_filter:track by_src, count 5, seconds 20; sid:1000011; rev:2;)
 EOL
 
 sudo mkdir -p /var/log/snort
