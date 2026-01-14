@@ -123,7 +123,7 @@ for img in "${IMG_LIST[@]}"; do
   case "$img" in
     ubuntu-22.04)
       [ -f "$UBUNTU_IMG" ] || run_or_die wget -q \
-        https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img \
+        https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-amd64.img \
         -O "$UBUNTU_IMG"
       FILE="$UBUNTU_IMG"
       ;;
@@ -136,7 +136,7 @@ for img in "${IMG_LIST[@]}"; do
     kali-linux)
       if [ ! -f "$KALI_IMG_QCOW2" ]; then
         run_or_die wget -q \
-          https://kali.download/cloud-images/kali-2025.2/kali-linux-2025.2-cloud-genericcloud-amd64.tar.xz \
+          https://old.kali.org/cloud-images/kali-2025.2/kali-linux-2025.2-cloud-genericcloud-amd64.tar.xz \
           -O "$KALI_TAR"
         run_or_die tar -xf "$KALI_TAR" -C "$IMG_DIR"
         command -v qemu-img >/dev/null || sudo apt install -y qemu-utils &>/dev/null
