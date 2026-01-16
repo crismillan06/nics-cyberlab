@@ -60,7 +60,7 @@ echo "🚀 Iniciando despliegue de NICS | CyberLab..."
 log_block "PASO 1 | Instalación de OpenStack"
 step_start=$(date +%s)
 
-bash "${DEPLOY_DIR}/openstack-installer.sh"
+bash "${DEPLOY_DIR}/openstack-install.sh"
 
 echo "[✔] Instalación completada en: $(timer $step_start)"
 echo "------------------------------------------------------------"
