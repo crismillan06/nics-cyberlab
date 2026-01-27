@@ -7,28 +7,69 @@
 ## Índice
 
 * [Introducción](#introducción)
+
 * [Visión general de los escenarios](#visión-general-de-los-escenarios)
 
   * [Level-01 – Mini SOC: detección y monitorización](#level-01--mini-soc-detección-y-monitorización)
-  * [Level-02 – Threat Intelligence y análisis de IOCs (MIST)](#level-02--threat-intelligence-y-análisis-de-iocs-mist)
+  * [Level-02 – Threat Intelligence y análisis de IOCs (MISP)](#level-02--threat-intelligence-y-análisis-de-iocs-misp)
+
 * [Normas generales del laboratorio](#normas-generales-del-laboratorio)
+
 * [Metodología de trabajo y evidencias](#metodología-de-trabajo-y-evidencias)
-* [Escenario Level-01](#escenario-level-01)
+
+---
+
+* [Escenario Level-01 – Mini SOC](#escenario-level-01)
 
   * [Descripción del escenario](#descripción-del-escenario)
   * [Arquitectura y roles](#arquitectura-y-roles)
   * [Objetivos formativos](#objetivos-formativos)
   * [Requisitos previos y ejecución del escenario](#requisitos-previos-y-ejecución-del-escenario)
 
-    * [Ejercicio 1 – Snort: detección de tráfico ICMP](#ejercicio-1--snort-detección-de-tráfico-icmp)
-    * [Ejercicio 2 – Wazuh: agentes, integración de logs y dashboard](#ejercicio-2--wazuh-agentes-integración-de-logs-y-dashboard)
-    * [Ejercicio 3 – MITRE Caldera: ataque básico y detección](#ejercicio-3--mitre-caldera-ataque-básico-y-detección)
-    * [Ejercicio 4 – Reglas personalizadas](#ejercicio-4--reglas-personalizadas)
-    * [Ejercicio 5 – Simulación SOC: escaneo con Nmap](#ejercicio-5--simulación-soc-escaneo-con-nmap)
-    * [Ejercicio 6 – Ataques múltiples y taxonomía](#ejercicio-6--ataques-múltiples-y-taxonomía)
-    * [Ejercicio 7 – Defensa o escalada de privilegios](#ejercicio-7--defensa-o-escalada-de-privilegios)
-    * [Ejercicio 8 – KPI de ciberseguridad](#ejercicio-8--kpi-de-ciberseguridad)
-* [Investigación adicional](#investigación-adicional)
+---
+
+* [Ejercicio 1 – Snort: detección de tráfico ICMP](#ejercicio-1--snort-detección-de-tráfico-icmp)
+
+* [Ejercicio 2 – Wazuh: agentes, integración de logs y dashboard](#ejercicio-2--wazuh-agentes-integración-de-logs-y-dashboard)
+
+  * [I. Navegación básica del Dashboard](#i-navegación-básica-del-dashboard)
+  * [II. Despliegue del agente desde la GUI](#ii-despliegue-del-agente-desde-la-gui-wazuh-manager)
+  * [III. Instalación y registro del agente en el nodo Snort](#iii-instalación-y-registro-del-agente-en-el-nodo-snort)
+  * [IV. Integración de Snort: lectura de alert_fast.txt](#iv-integración-de-snort-lectura-de-alert_fasttxt)
+  * [V. Verificación end-to-end](#v-verificación-end-to-end-generar-alertas-snort-y-verlas-en-wazuh)
+  * [VI. Visualización en Wazuh: eventos y Threat Hunting](#vi-visualización-en-wazuh-eventos-y-threat-hunting)
+  * [VII. Limpieza: eliminación del agente](#vii-limpieza-eliminación-del-agente-recomendable)
+  * [Conclusión técnica del ejercicio](#conclusión-final)
+
+* [Ejercicio 3 – MITRE Caldera: ataque básico y detección en Wazuh](#ejercicio-3--mitre-caldera-ataque-básico-y-detección-en-wazuh)
+
+  * [I. Acceso y verificación inicial en Caldera](#i-acceso-y-verificación-inicial-en-mitre-caldera)
+  * [II. Creación de la operación de ataque](#ii-creación-de-la-operación-de-ataque)
+  * [III. Ejecución de comandos](#iii-ejecución-de-comandos-desde-caldera)
+  * [IV. Análisis de eventos en Wazuh](#iv-análisis-de-eventos-en-wazuh)
+  * [V. Correlación ataque → detección](#v-correlación-ataque--detección)
+
+
+* [Ejercicio 4 – Simulación Mini SOC: escaneo de reconocimiento con Nmap](#ejercicio-4---simulación-mini-soc-escaneo-de-reconocimiento-con-nmap)
+
+  * [I. Verificación del agente víctima](#ii-verificación-del-agente-víctima)
+  * [II. Ejecución de reconocimiento sin detección](#iii-ejecución-de-reconocimiento-sin-detección)
+  * [III. Activación de reglas de detección](#v-activación-de-reglas-de-detección)
+  * [IV. Reejecución del ataque con detección](#vi-reejecución-del-reconocimiento-con-detección)
+  * [V. Análisis y validación en Wazuh](#vii-análisis-de-detección-en-wazuh)
+
+
+* [Ejercicio 5 – Reglas personalizadas y tuning](#ejercicio-5---reglas-personalizadas)
+
+* [Ejercicio 6 – Ataques múltiples y taxonomía MITRE ATT&CK](#ejercicio-6---ataques-múltiples-y-taxonomía)
+
+* [Ejercicio 7 – Defensa, hardening o escalada de privilegios](#ejercicio-7---defensa-o-escalada-de-privilegios)
+
+* [Ejercicio 8 – KPI y métricas de ciberseguridad](#ejercicio-8---kpi-de-ciberseguridad)
+
+---
+
+* [Investigación Opcional](#investigación-opcional) 
 
 ---
 
@@ -65,7 +106,7 @@ En este nivel se trabaja como analista SOC junior, aprendiendo a:
 
 ---
 
-### Level-02 – Threat Intelligence y análisis de IOCs (MIST)
+### Level-02 – Threat Intelligence y análisis de IOCs (MISP)
 
 Nivel enfocado en **ciberinteligencia de amenazas**, reutilizando previsiblemente el escenario del Level-01 e incorporando:
 
@@ -1049,7 +1090,7 @@ Pendiente de desarrollo detallado. Orientación:
 ---
 
 
-## Investigación adicional
+## Investigación Opcional
 
 
 Actividad opcional orientada a:
