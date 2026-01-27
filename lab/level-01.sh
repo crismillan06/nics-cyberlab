@@ -13,9 +13,6 @@
 #
 # Requisitos:
 #   - Guarda TODA la salida en: ./log/level.log (append)
-#   - Separa escenarios con:
-#       #################### LEVEL 01 ####################
-#       #################### LEVEL 02 ####################
 #   - Instala nmap en caldera-server
 #   - Asegura readiness de Caldera (puerto 8888 accesible desde snort)
 #   - Muestra al final credenciales/URLs y tiempo total
@@ -24,7 +21,7 @@
 set -euo pipefail
 
 # ======================================
-# DIRECTORIOS BASE (ROBUSTO)
+# DIRECTORIOS BASE
 # ======================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -81,12 +78,20 @@ log_block() {
   echo ""
 }
 
+# ======================================
+# Ejecutar script con salida ordenada
+# ======================================
 run_script() {
   local script="$1"
   require_file "$script"
   log_block "EJECUTANDO: $(basename "$script")"
-  # Ejecutar SIEMPRE desde la raíz del proyecto para que $PWD de los scripts sea correcto
-  ( cd "$BASE_DIR" && bash "$script" )
+
+  (
+    cd "$BASE_DIR"
+    stdbuf -oL -eL bash "$script" 2>&1 | while IFS= read -r line; do
+      echo "[$(date '+%H:%M:%S')][${script##*/}] $line"
+    done
+  )
   echo "------------------------------------------------------------"
 }
 
@@ -111,10 +116,8 @@ PY
 resolve_private_and_external_ip() {
   local server="$1" private_cidr="$2"
   local ips ip priv="" ext=""
-
   ips="$(extract_ips_from_addresses "$server" || true)"
   [[ -n "${ips}" ]] || return 1
-
   while read -r ip; do
     [[ -z "$ip" ]] && continue
     if [[ "$(ip_in_cidr "$ip" "$private_cidr")" == "1" ]]; then
@@ -123,7 +126,6 @@ resolve_private_and_external_ip() {
       ext="$ip"
     fi
   done <<<"$ips"
-
   [[ -n "$priv" ]] || return 1
   echo "$priv $ext"
 }
@@ -131,7 +133,6 @@ resolve_private_and_external_ip() {
 ensure_floating_ip_if_missing() {
   local server="$1" private_cidr="$2" network_external="$3"
   local ips ip has_external=0
-
   ips="$(extract_ips_from_addresses "$server" || true)"
   if [[ -n "${ips:-}" ]]; then
     while read -r ip; do
@@ -142,19 +143,15 @@ ensure_floating_ip_if_missing() {
       fi
     done <<<"$ips"
   fi
-
   (( has_external )) && return 0
-
   echo "[!] '$server' no tiene IP externa. Asignando Floating IP..."
   local free_fip
   free_fip="$(openstack floating ip list -f value -c "Floating IP Address" -c "Fixed IP Address" \
     | awk '$2=="None"{print $1; exit}' || true)"
-
   if [[ -z "$free_fip" ]]; then
     free_fip="$(openstack floating ip create "$network_external" -f value -c floating_ip_address)" \
       || die "No se pudo crear Floating IP en $network_external"
   fi
-
   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$free_fip" >/dev/null 2>&1 || true
   openstack server add floating ip "$server" "$free_fip" || die "No se pudo asociar Floating IP $free_fip a $server"
   echo "[✔] Floating IP asignada a '$server': $free_fip"
@@ -183,11 +180,9 @@ wait_ssh() {
 ensure_sg_rule() {
   local sg="$1" proto="$2" port="$3" cidr="$4"
   local err
-
   err="$(openstack security group rule create \
       --ingress --protocol "$proto" --dst-port "${port}:${port}" --remote-ip "$cidr" \
       "$sg" 2>&1 >/dev/null || true)"
-
   if [[ -z "$err" ]]; then
     echo "[✔] Regla creada en SG '$sg': $proto/$port desde $cidr"
     return 0
@@ -202,28 +197,11 @@ ensure_sg_rule() {
 extract_cloud_init_password() {
   local f="$1"
   [[ -f "$f" ]] || return 0
-
   local p
   p="$(grep -E '^[[:space:]]*password:[[:space:]]*' "$f" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*password:[[:space:]]*//')" || true
-  if [[ -n "${p:-}" ]]; then
-    echo "$p"
-    return 0
-  fi
-
-  p="$(grep -E '^[[:space:]]*-[[:space:]]*"?[A-Za-z0-9._-]+:[^"]+' "$f" 2>/dev/null \
-      | head -n1 \
-      | sed -E 's/^[[:space:]]*-[[:space:]]*"?//; s/"$//')" || true
-  if [[ -n "${p:-}" ]]; then
-    echo "${p#*:}"
-    return 0
-  fi
-
-  p="$(awk '
-    BEGIN{inlist=0}
-    /chpasswd:/{inlist=1}
-    inlist && /debian:/{print; exit}
-  ' "$f" 2>/dev/null | sed -E 's/^[[:space:]]*debian:[[:space:]]*//')" || true
-  [[ -n "${p:-}" ]] && echo "$p" || true
+  [[ -n "${p:-}" ]] && echo "$p" && return 0
+  p="$(awk '/chpasswd:/{getline; print}' "$f" 2>/dev/null | sed -E 's/^[[:space:]]*debian:[[:space:]]*//')" || true
+  [[ -n "${p:-}" ]] && echo "$p"
 }
 
 # ======================================
@@ -231,7 +209,7 @@ extract_cloud_init_password() {
 # ======================================
 mkdir -p "${LOG_DIR}"
 
-LEVEL_NUM="$(next_level_number)"
+LEVEL_NUM="01"
 
 # Encabezado del escenario (append al log)
 {
@@ -255,17 +233,8 @@ echo "[i] Log      : ${LOG_FILE}"
 echo "------------------------------------------------------------"
 
 # ======================================
-# EJECUCIÓN EN ORDEN
+# VARIABLES DE OPENSTACK / SSH / RED
 # ======================================
-run_script "${INST_DIR}/op+snort.sh"
-run_script "${INST_DIR}/op+wazuh.sh"
-run_script "${INST_DIR}/op+caldera.sh"
-
-# ======================================
-# POST | INSTALAR NMAP EN CALDERA
-# ======================================
-log_block "POST | Instalación de Nmap en caldera-server"
-
 VENV_DIR="${BASE_DIR}/deploy/openstack_venv"
 OPENRC_FILE="${BASE_DIR}/admin-openrc.sh"
 KEY_NAME="my_key"
@@ -291,6 +260,39 @@ PRIVATE_CIDR="$(openstack subnet show "$SUBNET_PRIVATE" -f value -c cidr 2>/dev/
   || die "No se pudo obtener el CIDR de $SUBNET_PRIVATE"
 echo "[✔] CIDR privado: $PRIVATE_CIDR"
 
+# ======================================
+# EJECUCIÓN EN PARALELO CON FEEDBACK ORDENADO
+# ======================================
+echo "[i] Lanzando instancias en paralelo con intervalos escalonados..."
+
+# Lanzar Snort (sin delay)
+(run_script "${INST_DIR}/op+snort.sh") &
+PID_SNORT=$!
+
+# Lanzar Wazuh tras 3 min
+(
+  sleep 180
+  run_script "${INST_DIR}/op+wazuh.sh"
+) &
+PID_WAZUH=$!
+
+# Lanzar Caldera tras 5 min
+(
+  sleep 300
+  run_script "${INST_DIR}/op+caldera.sh"
+) &
+PID_CALDERA=$!
+
+# Esperar a que todos los procesos terminen
+wait $PID_SNORT
+wait $PID_WAZUH
+wait $PID_CALDERA
+
+echo "[✔] Todas las instancias levantadas y SSH disponible."
+
+# ======================================
+# POST | Instalación de Nmap en Caldera
+# ======================================
 ensure_floating_ip_if_missing "caldera-server" "$PRIVATE_CIDR" "$NETWORK_EXTERNAL"
 
 read -r CALDERA_PRIV CALDERA_EXT < <(resolve_private_and_external_ip "caldera-server" "$PRIVATE_CIDR") \
@@ -308,21 +310,15 @@ sudo apt-get install -y nmap
 echo "[✔] nmap instalado correctamente en caldera-server"
 EOF
 
-echo "------------------------------------------------------------"
-
 # ======================================
-# PRECHECK | CALDERA READY + SG 8888
+# PRECHECK | Caldera listo + SG 8888
 # ======================================
-log_block "PRECHECK | Caldera listo y accesible desde snort-server (TCP/8888)"
-
 CALDERA_PORT="8888"
 SNORT_INSTANCE="snort-server"
 CALDERA_INSTANCE="caldera-server"
 
-# Abrir 8888/TCP en SG para tráfico interno (idempotente)
 ensure_sg_rule "$SEC_GROUP" tcp "$CALDERA_PORT" "$PRIVATE_CIDR"
 
-# Resolver IP privada de Caldera y SSH IP de Snort
 read -r CALDERA_PRIV CALDERA_EXT < <(resolve_private_and_external_ip "$CALDERA_INSTANCE" "$PRIVATE_CIDR") \
   || die "No pude resolver IPs para $CALDERA_INSTANCE"
 read -r SNORT_PRIV SNORT_EXT < <(resolve_private_and_external_ip "$SNORT_INSTANCE" "$PRIVATE_CIDR") \
@@ -331,14 +327,10 @@ read -r SNORT_PRIV SNORT_EXT < <(resolve_private_and_external_ip "$SNORT_INSTANC
 SNORT_SSH_IP="${SNORT_EXT:-$SNORT_PRIV}"
 CALDERA_URL_PRIV="http://${CALDERA_PRIV}:${CALDERA_PORT}"
 
-echo "[i] snort-server: private=${SNORT_PRIV} | external=${SNORT_EXT:-N/A} | ssh=${SNORT_SSH_IP}"
-echo "[i] caldera-server URL (priv): ${CALDERA_URL_PRIV}"
-
 wait_ssh "$SNORT_SSH_IP" "$SSH_USER" "$SSH_KEY_PATH" 300
 
-echo "[+] Esperando a que Caldera responda desde snort-server..."
 READY=0
-for _ in $(seq 1 60); do   # 60 intentos x 5s = 5 min
+for _ in $(seq 1 60); do
   if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i "$SSH_KEY_PATH" \
       "$SSH_USER@$SNORT_SSH_IP" \
       "curl -fsS --connect-timeout 3 --max-time 5 '$CALDERA_URL_PRIV' >/dev/null"; then
@@ -346,28 +338,9 @@ for _ in $(seq 1 60); do   # 60 intentos x 5s = 5 min
     break
   fi
   sleep 5
-  echo -n "."
 done
-echo ""
 
-if [[ "$READY" -ne 1 ]]; then
-  echo "[!] Caldera aún no responde en ${CALDERA_URL_PRIV} desde snort-server."
-  echo "[!] Diagnóstico rápido (caldera-server): puerto 8888 y log"
-
-  # Re-evaluar ssh caldera por si cambió
-  ensure_floating_ip_if_missing "caldera-server" "$PRIVATE_CIDR" "$NETWORK_EXTERNAL"
-  read -r _CAL_PRIV _CAL_EXT < <(resolve_private_and_external_ip "caldera-server" "$PRIVATE_CIDR") || true
-  _CAL_SSH="${_CAL_EXT:-$_CAL_PRIV}"
-
-  wait_ssh "$_CAL_SSH" "$SSH_USER" "$SSH_KEY_PATH" 60 || true
-  ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" "$SSH_USER@$_CAL_SSH" \
-    "ss -ltnp | grep ':8888' || true; tail -n 80 ~/caldera/caldera.log 2>/dev/null || true" || true
-
-  die "Caldera no está accesible desde snort-server. No ejecuto op+snort-caldera.sh."
-fi
-
-echo "[✔] Caldera responde desde snort-server. Continuando con integración..."
-echo "------------------------------------------------------------"
+[[ "$READY" -eq 1 ]] || die "Caldera no está accesible desde snort-server."
 
 # ======================================
 # INTEGRACIONES
@@ -376,11 +349,11 @@ run_script "${INST_DIR}/op+snort-caldera.sh"
 run_script "${INST_DIR}/op+wazuh-snort.sh"
 
 # ======================================
-# RESUMEN FINAL (CONSOLIDADO)
+# RESUMEN FINAL
 # ======================================
 log_block "RESUMEN FINAL | LEVEL ${LEVEL_NUM}"
 
-# Asegurar floating IPs por si cambió algo
+# Asegurar floating IPs
 ensure_floating_ip_if_missing "snort-server" "$PRIVATE_CIDR" "$NETWORK_EXTERNAL"
 ensure_floating_ip_if_missing "wazuh-manager" "$PRIVATE_CIDR" "$NETWORK_EXTERNAL"
 ensure_floating_ip_if_missing "caldera-server" "$PRIVATE_CIDR" "$NETWORK_EXTERNAL"
@@ -396,26 +369,21 @@ SNORT_SSH_IP="${SNORT_EXT:-$SNORT_PRIV}"
 WAZUH_SSH_IP="${WAZUH_EXT:-$WAZUH_PRIV}"
 CALDERA_SSH_IP="${CALDERA_EXT:-$CALDERA_PRIV}"
 
-# Credenciales Wazuh (admin) desde fichero generado por el instalador
 WAZUH_ADMIN_PASS="$(ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" "$SSH_USER@$WAZUH_SSH_IP" \
   'cat /tmp/wazuh-admin-password 2>/dev/null || true' | tr -d '\r' || true)"
 [[ -z "${WAZUH_ADMIN_PASS:-}" ]] && WAZUH_ADMIN_PASS="<NO_DETECTADA_EN_SCRIPT>"
 
-# Caldera creds por defecto (según tu script)
 CALDERA_URL="http://${CALDERA_SSH_IP}:8888"
 CALDERA_USER="admin"
 CALDERA_PASS="admin"
 
-# Snort: no dashboard; acceso por SSH (usuario/clave)
 SNORT_USER="debian"
 SNORT_PASS="$(extract_cloud_init_password "$USERDATA_FILE" || true)"
 [[ -z "${SNORT_PASS:-}" ]] && SNORT_PASS="<SSH_POR_CLAVE (password no detectada)>"
 
-# Wazuh Dashboard
 WAZUH_URL="https://${WAZUH_SSH_IP}"
 WAZUH_USER="admin"
 
-# Tiempo total
 overall_end=$(date +%s)
 overall_duration=$((overall_end - overall_start))
 
@@ -450,7 +418,5 @@ echo "[⏱] Tiempo total de ejecución: $(format_time_long "$overall_duration")"
 echo "[📜] Puedes revisar el log en: ${LOG_FILE}"
 echo "==============================================================="
 
-# Desactivar venv si estaba activo
 deactivate 2>/dev/null || true
-
 exit 0
