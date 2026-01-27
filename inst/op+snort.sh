@@ -42,7 +42,7 @@ fi
 # CONFIGURACIÓN GENERAL
 # =========================
 IMAGE_NAME="debian-12"
-FLAVOR="S_2CPU_4GB"
+FLAVOR="T_1CPU_2GB"
 KEY_NAME="my_key"
 SEC_GROUP="sg_basic"
 
@@ -136,7 +136,7 @@ echo "[✔] IP flotante asignada: $FLOATING_IP"
 # ESPERA SSH
 # =========================
 echo "[+] Esperando conexión SSH..."
-SSH_TIMEOUT=60
+SSH_TIMEOUT=120
 SSH_START=$(date +%s)
 until ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" $SSH_USER@"$FLOATING_IP" "echo ok" >/dev/null 2>&1; do
     sleep 5; echo -n "."
@@ -192,7 +192,7 @@ EOL
 # === Reglas locales (ICMP + Nmap SYN scan) ===
 sudo tee /etc/snort/rules/local.rules > /dev/null <<'EOL'
 alert icmp any any -> any any (msg:"Intento ICMPv4 detectado"; sid:1000010; rev:1;)
-alert tcp any any -> any any (msg:"Nmap TCP SYN scan"; flow:stateless; flags:S; detection_filter:track by_src, count 5, seconds 20; sid:1000011; rev:2;)
+#alert tcp any any -> any any (msg:"Nmap TCP SYN scan"; flow:stateless; flags:S; detection_filter:track by_src, count 5, seconds 20; sid:1000011; rev:2;)
 EOL
 
 sudo mkdir -p /var/log/snort

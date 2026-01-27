@@ -42,7 +42,7 @@ fi
 # CONFIGURACIÓN GENERAL
 # =========================
 IMAGE_NAME="debian-12"
-FLAVOR="S_2CPU_4GB"
+FLAVOR="T_1CPU_2GB"
 KEY_NAME="my_key"
 SEC_GROUP="sg_basic"
 
@@ -135,7 +135,7 @@ echo "[✔] IP flotante asignada: $FLOATING_IP"
 # ESPERA SSH
 # =========================
 echo "[+] Esperando conexión SSH..."
-SSH_TIMEOUT=60
+SSH_TIMEOUT=120
 SSH_START=$(date +%s)
 until ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" $SSH_USER@"$FLOATING_IP" "echo ok" >/dev/null 2>&1; do
     sleep 5; echo -n "."

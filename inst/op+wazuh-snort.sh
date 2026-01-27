@@ -366,17 +366,17 @@ set -euo pipefail
 RULE_FILE="/var/ossec/etc/rules/snort_local_rules.xml"
 
 sudo tee "$RULE_FILE" >/dev/null <<'EOF'
-<group name="local,snort,network,scan,">
+#<group name="local,snort,network,scan,">
   <rule id="600001" level="7">
     <match>Intento ICMPv4 detectado</match>
     <description>Snort ICMP detection</description>
   </rule>
 
-  <rule id="600010" level="8">
-    <match>Nmap TCP SYN scan</match>
-    <description>Snort scan activity detected</description>
-  </rule>
-</group>
+  #<rule id="600010" level="8">
+    #<match>Nmap TCP SYN scan</match>
+    #<description>Snort scan activity detected</description>
+  #</rule>
+#</group>
 EOF
 
 sudo chown root:wazuh "$RULE_FILE" 2>/dev/null || sudo chown root:root "$RULE_FILE"
