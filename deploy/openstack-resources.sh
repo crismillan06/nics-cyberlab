@@ -322,7 +322,7 @@ echo "🔹 Comprobando cloud-init..."
 
 if [ ! -f "$PASS_FILE" ]; then
   echo "[+] Creando fichero cloud-init..."
-  cat > "$PASS_FILE" <<EOF
+  cat > "$PASS_FILE" <<'EOF'
 #cloud-config
 chpasswd: { expire: False }
 ssh_pwauth: True
@@ -342,13 +342,15 @@ runcmd:
       *)      PASS="default123" ;;
     esac
 
-    # Asegurar login por contraseña en SSH (por si la imagen lo bloquea)
+    # Asegurar login por contraseña en SSH
     if grep -qE '^\s*PasswordAuthentication\s+no' /etc/ssh/sshd_config; then
       sed -i 's/^\s*PasswordAuthentication\s\+no/PasswordAuthentication yes/' /etc/ssh/sshd_config
     fi
+
     if ! grep -qE '^\s*PasswordAuthentication\s+yes' /etc/ssh/sshd_config; then
       echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
     fi
+
     systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
 
     # Usuario principal (no root): primer UID>=1000 con shell válida
