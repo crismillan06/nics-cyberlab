@@ -282,7 +282,7 @@ KEY_NAME="my_key"
 SSH_KEY_PATH="${BASE_DIR}/deploy/keys/${KEY_NAME}.pem"
 
 # YAML centralizado
-USERDATA_FILE="${BASE_DIR}/deploy/cloud-init/password-os.yml"
+USERDATA_FILE="${BASE_DIR}/deploy/cloud-init/passwd-os.yml"
 
 SUBNET_PRIVATE="subnet_net_private_01"
 NETWORK_EXTERNAL="net_external_01"
