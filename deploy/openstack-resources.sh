@@ -76,7 +76,7 @@ KEYPAIR="my_key"
 KEYPAIR_PRIV_FILE="${KEYS_DIR}/${KEYPAIR}.pem"
 KEYPAIR_PUB_FILE="${KEYS_DIR}/${KEYPAIR}.pem.pub"
 
-PASS_FILE="${CLOUDINIT_DIR}/set-password.yml"
+PASS_FILE="${CLOUDINIT_DIR}/passwd-os.yml"
 
 # --------- FUNCIONES --------------------------
 
@@ -324,9 +324,39 @@ if [ ! -f "$PASS_FILE" ]; then
   echo "[+] Creando fichero cloud-init..."
   cat > "$PASS_FILE" <<EOF
 #cloud-config
-password: nics2025!
 chpasswd: { expire: False }
 ssh_pwauth: True
+
+runcmd:
+  - |
+    set -e
+
+    # Detectar SO
+    . /etc/os-release 2>/dev/null || true
+
+    # Password según SO
+    case "${ID:-}" in
+      ubuntu) PASS="ubuntu123" ;;
+      debian) PASS="debian123" ;;
+      kali)   PASS="kali123" ;;
+      *)      PASS="default123" ;;
+    esac
+
+    # Asegurar login por contraseña en SSH (por si la imagen lo bloquea)
+    if grep -qE '^\s*PasswordAuthentication\s+no' /etc/ssh/sshd_config; then
+      sed -i 's/^\s*PasswordAuthentication\s\+no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    fi
+    if ! grep -qE '^\s*PasswordAuthentication\s+yes' /etc/ssh/sshd_config; then
+      echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+    fi
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+
+    # Usuario principal (no root): primer UID>=1000 con shell válida
+    USER="$(getent passwd | awk -F: '$3>=1000 && $7 !~ /(nologin|false)$/ {print $1; exit}')"
+    [ -z "$USER" ] && USER="$(ls -1 /home 2>/dev/null | head -n 1)"
+    [ -z "$USER" ] && USER="root"
+
+    echo "${USER}:${PASS}" | chpasswd
 EOF
   echo "[✔] Fichero cloud-init generado en: $PASS_FILE"
 else

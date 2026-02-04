@@ -4,6 +4,18 @@
 
 ---
 
+Perfecto, Cristian. He revisado **todo el contenido real del documento** y el índice original se ha quedado corto respecto a lo que ya está desarrollado (sobre todo ejercicios 3 y 4) y a lo que se anuncia para Level-02.
+
+Aquí tienes un **índice actualizado, coherente y defendible**, alineado con el contenido actual **y preparado para crecer** sin rehacerlo después.
+
+---
+
+Perfecto, Cristian. He revisado **todo el contenido real del documento** y el índice original se ha quedado corto respecto a lo que ya está desarrollado (sobre todo ejercicios 3 y 4) y a lo que se anuncia para Level-02.
+
+Aquí tienes un **índice actualizado, coherente y defendible**, alineado con el contenido actual **y preparado para crecer** sin rehacerlo después.
+
+---
+
 ## Índice
 
 * [Introducción](#introducción)
@@ -711,7 +723,7 @@ En el Dashboard de Caldera:
 
 ### 3.3 Creación de una operación básica
 
-Acceda a **Operations** y seleccione **Create Operation**.
+Acceda a **Operations** y seleccione **New Operation**.
 
 Configure la operación con los siguientes parámetros:
 
@@ -846,9 +858,8 @@ El ejercicio ilustra el flujo completo de un **Mini-SOC**:
 
 ### Prerrequisitos
 
-* Acceso al **Dashboard de MITRE Caldera**.
+* Acceso al el nodo atacante.
 * Acceso al **Dashboard de Wazuh**.
-* Agente de Caldera activo en el nodo Snort.
 * Agente de Wazuh operativo en el nodo Snort.
 * IPs y credenciales disponibles en:
 
@@ -856,67 +867,29 @@ El ejercicio ilustra el flujo completo de un **Mini-SOC**:
 cat log/level.log
 ```
 
----
+#### **¡IMPORTANTE!**  
+Lance en el nodo snort siempre:  
 
-## I. Acceso a MITRE Caldera
-
-Desde el navegador:
-
+```bash
+sudo snort -i ens3 -c /etc/snort/snort.lua -A alert_fast -k none -l /var/log/snort
 ```
-http://IP_CALDERA:8888
-```
-
-**Observación esperada**
-
-* Acceso correcto al Dashboard.
-* Menú visible: Agents, Operations, Adversaries.
+> ⚠️ **Advertencia:** recuerde que siempre que quiera capturar tráfico tendrá que arrancar la herramienta con el comando previo.
 
 ---
 
-## II. Verificación del agente víctima
+## I. Ejecución de reconocimiento SIN detección
 
-En Caldera:
+### 4.1 Ejecución del escaneo Nmap
 
-1. Acceda a **Agents**.
-2. Identifique el agente del **nodo Snort**.
-
-**Observación esperada**
-
-* Estado: **Alive**
-
-> Si el agente no está activo, no continúe.
-
----
-
-## III. Ejecución de reconocimiento SIN detección
-
-### 4.1 Creación de la operación
-
-En **Operations → Create Operation**:
-
-* **Name:** `ejercicio-4-nmap-sin-reglas`
-* **Group:** agente del nodo Snort
-* **Adversary:** `Default`
-* **Planner:** `atomic`
-* **Run State:** `Running`
-
----
-
-### 4.2 Ejecución del escaneo Nmap
-
-Dentro de la operación, ejecute una habilidad de **Command Execution (T1059)** con el comando:
+Desde el terminal del nodo caldera, ejecute una habilidad de **Command Execution (T1059)** mediante el comando:
 
 ```bash
 nmap -sS -Pn <IP_NODO_SNORT>
 ```
 
-**Observación esperada en Caldera**
-
-* Comando ejecutado con estado `SUCCESS`.
-
 ---
 
-## IV. Análisis en Wazuh (sin reglas activas)
+## II. Análisis en Wazuh (sin reglas activas)
 
 Acceda al **Dashboard de Wazuh**.
 
@@ -928,16 +901,24 @@ Acceda al **Dashboard de Wazuh**.
 
 **Resultado esperado**
 
-* ❌ No aparecen alertas de escaneo
-* ❌ No existe correlación de Nmap
+* [✖] No aparecen alertas de escaneo
+* [✖] No existe correlación de Nmap
 
-> El SOC **no detecta el reconocimiento**.
+El SOC **no detecta el reconocimiento**.
+
+> ⚠️: Asegurese de que el fallo de la detección no haya sido causado por no tener lanzado snort.
+
+```bash
+sudo snort -i ens3 -c /etc/snort/snort.lua -A alert_fast -k none -l /var/log/snort
+```
 
 ---
 
-## V. Activación de reglas de detección
+## III. Activación de reglas de detección
 
 ### 4.3 Activar regla en Snort
+
+Primeramente pare snort si está arrancado monitoreando ya sea, y posteriormente realice los siguientes pasos.
 
 En el nodo Snort:
 
@@ -948,13 +929,29 @@ sudo nano /etc/snort/rules/local.rules
 Descomente:
 
 ```bash
-alert tcp any any -> any any (msg:"Nmap TCP SYN scan"; flow:stateless; flags:S; detection_filter:track by_src, count 5, seconds 20; sid:1000011; rev:2;)
+alert tcp any any -> any any (
+    msg:"Posible TCP SYN scan detectado";
+    flags:S;
+    flow:stateless;
+    detection_filter:track by_src, count 5, seconds 20;
+    sid:1000011;
+    rev:3;
+)
 ```
 
-Reinicie Snort:
+> Explicar porque se descomenta?
+
+Compruebe su funcionmaiento mediante un test:
 
 ```bash
-sudo systemctl restart snort
+# El fichero de configuración de Snort ha cambiando en la versión 3 a snort.lua
+sudo snort -T -c /etc/snort/snort.lua
+```
+
+Lance de nuevo:
+
+```bash
+sudo snort -i ens3 -c /etc/snort/snort.lua -A alert_fast -k none -l /var/log/snort
 ```
 
 ---
@@ -970,17 +967,22 @@ sudo nano /var/ossec/etc/rules/snort_local_rules.xml
 Descomente el grupo y la regla:
 
 ```xml
-<group name="local,snort,network,scan,">
-  <rule id="600001" level="7">
-    <match>Intento ICMPv4 detectado</match>
-    <description>Snort ICMP detection</description>
+#<group name="local,snort,network,scan">
+
+  <!-- ICMP Echo Request -->
+  <rule id="600001" level="5">
+    <match>ICMP Echo Request detectado</match>
+    <description>Snort - ICMP Echo Request detected</description>
   </rule>
 
-  <rule id="600010" level="8">
-    <match>Nmap TCP SYN scan</match>
-    <description>Snort scan activity detected</description>
+  #<!-- TCP SYN Scan -->
+  #<rule id="600010" level="8">
+    #<match>Posible TCP SYN scan detectado</match>
+    #<description>Snort - TCP SYN scan activity detected</description>
+  #</rule>
+
   </rule>
-</group>
+#</group>
 ```
 
 Reinicie Wazuh:
@@ -991,7 +993,7 @@ sudo systemctl restart wazuh-manager
 
 ---
 
-## VI. Reejecución del reconocimiento CON detección
+## IV. Reejecución del reconocimiento CON detección
 
 Desde Caldera, ejecute **el mismo comando**:
 
@@ -1001,7 +1003,7 @@ nmap -sS -Pn <IP_NODO_SNORT>
 
 ---
 
-## VII. Análisis de detección en Wazuh
+## V. Análisis de detección en Wazuh
 
 En el Dashboard de Wazuh:
 
@@ -1013,79 +1015,467 @@ En el Dashboard de Wazuh:
 
 **Resultado esperado**
 
-* ✅ Alerta visible
-* ✅ Regla aplicada correctamente
-* ✅ Reconocimiento detectado
+* [✔] Alerta visible
+* [✔] Regla aplicada correctamente
+* [✔] Reconocimiento detectado
 
 ---
 
-## Criterio de éxito
+## Ejercicio 5 – Reglas personalizadas en Snort y Wazuh
 
-* El escaneo **no se detecta** sin reglas activas.
-* El mismo escaneo **sí se detecta** tras activarlas.
-* El usuario comprende el papel crítico de:
-  * reglas de Snort
-  * reglas de correlación en Wazuh
+### Objetivo
 
----
+Diseñar y probar **reglas personalizadas** en Snort y Wazuh para mejorar la detección de tráfico sospechoso y reducir falsos positivos.
 
-## Evidencia a entregar
+El ejercicio permite comprender el flujo completo de un Mini-SOC:
 
-* Operación de Caldera ejecutada (antes y después).
-* Ausencia de alertas en Wazuh (fase sin reglas).
-* Alertas de escaneo detectadas (fase con reglas).
+**tráfico sospechoso controlado (Caldera) → ejecución en víctima (Snort) → telemetría → detección y correlación (Wazuh)**
 
----
+Se busca que el alumno:
 
-
-## Ejercicio 5 - Reglas personalizadas
-
-
-Pendiente de desarrollo detallado. Orientación:
-
-
-* Ajustar firmas en Snort o reglas/decoders en Wazuh.
-* Evidenciar reducción de falsos positivos o mejora de detección.
-
+* Ajuste firmas en Snort (ICMP, TCP SYN, Port Knocking).
+* Cree reglas personalizadas en Wazuh para correlación de eventos.
+* Evalúe la efectividad de la detección y el impacto en falsos positivos.
 
 ---
 
+### Prerrequisitos
+
+* Acceso al nodo atacante.
+* Acceso al Dashboard de Wazuh (nodo monitor).
+* Agente de Wazuh operativo en el nodo Snort.
+* IPs y credenciales disponibles:
+
+```bash
+cat log/level.log
+```
+
+Snort corriendo para capturar tráfico:
+
+```bash
+sudo snort -i ens3 -c /etc/snort/snort.lua -A alert_fast -k none -l /var/log/snort
+```
+
+---
+
+## I. Captura de tráfico CON/SIN detección mediante las reglas actuales
+
+### Prueba ICMP
+
+```bash
+ping -c 4 <IP_NODO_SNORT>
+```
+
+### Prueba TCP SYN (Nmap)
+
+```bash
+nmap -sS -Pn <IP_NODO_SNORT>
+```
+
+## Nuevas reglas personalizadas
+
+### Prueba Port Knocking
+
+Primero en el nodo atacante instale la herramienta de ``hping3``, y luego posteriormnete ejecute de forma consecutiva:
+
+```bash
+sudo hping3 -S -p 1001 <IP_NODO_SNORT> -c 1
+sudo hping3 -S -p 1002 <IP_NODO_SNORT> -c 1
+sudo hping3 -S -p 1003 <IP_NODO_SNORT> -c 1
+```
+
+> ℹ️ **Recomendable:** crear un script con las 3 líneas, denominado por ejemplo ``h3ping.sh`` y darle permisos de ejecución ``+x``.
+
+**Observación esperada en Wazuh**  
+
+* [✔] Aparecen alertas de ICMP, TCP SYN.  
+* [✖] No aparecen alertas de Port Knocking.  
+* [⚠] Asegúrese de que Snort esté corriendo para capturar tráfico.  
+
+---
+
+## II. Activación de reglas de detección
+
+### 5.1 Activar reglas en Snort
+
+En el nodo Snort, editar `/etc/snort/rules/local.rules` y configurar reglas personalizadas para poder detectar el Port-Knocking:
+
+```xml
+alert icmp any any -> any any (
+    msg:"ICMP Echo Request detectado";
+    itype:8;
+    detection_filter:track by_src, count 3, seconds 20;
+    sid:1000010;
+    rev:2;
+)
+
+alert tcp any any -> any any (
+    msg:"Posible TCP SYN scan detectado";
+    flags:S;
+    flow:stateless;
+    detection_filter:track by_src, count 5, seconds 20;
+    sid:1000011;
+    rev:3;
+)
+
+<!-- Inserte aquí bloque con la nueva regla para Port-Knocking -->
+```
+
+> <details>
+> <summary><b>ℹ️ Solución:</b></summary>
+> alert tcp any any -> any [1001,1002,1003] ( 
+> <br>msg:"Posible port knocking detectado";
+> <br>flags:S;
+> <br>flow:stateless;
+> <br>sid:1000022;
+> <br>rev:3;
+> <br>)
+> </details>  
+
+--- 
+
+Comprobar configuración:  
+
+```bash
+sudo snort -T -c /etc/snort/snort.lua
+```
+
+Lanzar Snort:
+
+```bash
+sudo snort -i ens3 -c /etc/snort/snort.lua -A alert_fast -k none -l /var/log/snort
+```
+
+---
+
+### 5.2 Activar reglas en Wazuh
+
+En el nodo Wazuh Manager, editar `/var/ossec/etc/rules/snort_local_rules.xml`:
+
+```xml
+<group name="local,snort,network,scan">
+
+  <rule id="600001" level="5">
+    <match>ICMP Echo Request detectado</match>
+    <description>Snort - ICMP Echo Request detected</description>
+  </rule>
+
+  <rule id="600010" level="8">
+    <match>Posible TCP SYN scan detectado</match>
+    <description>Snort - TCP SYN scan activity detected</description>
+  </rule>
+
+  <!-- Inserte aquí bloque con la nueva regla para Port-Knocking -->
+
+</group>
+```
+
+> <details>
+> <summary><b>ℹ️ Solución:</b></summary>
+>
+> ```xml
+> <rule id="600020" level="9">
+> <br><match>Posible port knocking detectado</match>
+> <br><description>Snort - Port knocking attempt detected</description>
+> <br></rule>
+> ```
+>
+> </details>  
+
+---
+
+Reiniciar Wazuh:
+
+```bash
+sudo systemctl restart wazuh-manager
+```
+
+---
+
+## III. Reejecución del tráfico CON detección de las reglas finales
+
+Desde Caldera:
+
+**ICMP**
+
+```bash
+ping -c 4 <IP_NODO_SNORT>
+```
+
+**TCP SYN (Nmap)**
+
+```bash
+nmap -sS -Pn <IP_NODO_SNORT>
+```
+
+**Port Knocking:**
+
+```bash
+sudo hping3 -S -p 1001 <IP_NODO_SNORT> -c 1
+sudo hping3 -S -p 1002 <IP_NODO_SNORT> -c 1
+sudo hping3 -S -p 1003 <IP_NODO_SNORT> -c 1
+```
+
+Visualice los logs de snort una vez completada la configuración:
+
+``` bash
+sudo tail -f /var/log/snort/alert_fast.txt
+```
+
+### Resultado esperado en Snort
+
+```
+[**] [1:1000010:2] "ICMP Echo Request detectado"
+[**] [1:1000011:3] "Posible TCP SYN scan detectado"
+[**] [1:1000022:3] "Posible port knocking detectado"
+```
+
+---
+
+## IV. Análisis de detección en Wazuh
+
+En el Dashboard de Wazuh:
+
+* Filtre por **agent.name → nodo Snort**
+* Observe eventos relacionados con:
+
+| Evento                    | Severidad Wazuh | Observación                  |
+| ------------------------- | --------------- | ---------------------------- |
+| ICMP Echo Request         | 5               | Ping detectado               |
+| TCP SYN scan              | 8               | Escaneo tipo Nmap detectado  |
+| Port Knocking (secuencia) | 9               | Secuencia completa detectada |
+
+**Resultado esperado**
+
+* [✔] Alertas visibles.  
+* [✔] Reglas aplicadas correctamente.  
+* [✔] Correlación de port knocking generada correctamente.  
+
+> ℹ️ **Nota:** En el siguiente ejercicio se profundizará más sobre los niveles de criticidad de los ataques visto y su taxonomía.
+
+---
+
+## V. Conclusiones
+
+* Ajustar la detección en Snort permite detectar actividades sospechosas evitando **alertas innecesarias** (falsos positivos).
+* Modificar reglas en Wazuh mejora la **priorización de eventos** y reduce información irrelevante.
+* Comparar los registros antes y después de los cambios permite comprobar la mejora del sistema.
+* Las **reglas personalizadas** ayudan a reducir ruido y a centrarse en alertas importantes dentro del Mini-SOC.
+* Snort analiza el tráfico de red, mientras que Wazuh correlaciona la información para generar **alertas más precisas**.
+* Este ejercicio sirve como base para crear y adaptar nuevas reglas en entornos de laboratorio o producción.
+
+---
 
 ## Ejercicio 6 - Ataques múltiples y taxonomía
 
-
 Pendiente de desarrollo detallado. Orientación:
 
+Matriz Enterprise: https://attack.mitre.org/matrices/enterprise/  
+Matriz ICS: https://attack.mitre.org/matrices/ics/
 
 * Correlacionar múltiples señales.
 * Clasificar eventos y mapear con MITRE ATT&CK.
 
-
 ---
-
 
 ## Ejercicio 7 - Defensa o escalada de privilegios
 
 
 Pendiente de desarrollo detallado. Orientación:
 
+Matriz D3FEND: https://d3fend.mitre.org/ 
 
 * Analizar señales de hardening/defensa o post-explotación controlada.
 * Documentar hipótesis y evidencias.
 
+---
+
+## Ejercicio 8 – Creación de un KPI operativo basado en un ataque real
+
+### Objetivo
+
+Diseñar un **KPI operativo propio** a partir de un ataque observado durante el laboratorio (MITRE Caldera → Snort → Wazuh), de forma que:
+
+* Permita **detectar rápidamente la recurrencia del ataque**.
+* Facilite el **triage y la reacción de otro analista SOC**.
+* Sirva como **indicador continuo** de riesgo operativo.
+
+Este ejercicio simula una tarea real de un SOC **Level 1 / Level 2**: transformar una detección puntual en un **indicador reutilizable**.
 
 ---
 
+### Contexto del ejercicio
 
-## Ejercicio 8 - KPI de ciberseguridad
+Durante los ejercicios anteriores se ha observado un patrón de ataque realista, por ejemplo:
 
+* Ejecución remota de comandos desde Caldera.
+* Uso de `sudo` / cambio de privilegios.
+* Actividad anómala detectada por reglas de Wazuh.
 
-Pendiente de desarrollo detallado. Orientación:
+Este patrón **no se trata como un evento aislado**, sino como un **caso recurrente** que debe ser monitorizado.
 
+---
 
-* Definir KPI operativos (MTTD, volumen de alertas, ratio FP/TP, etc.).
-* Reportar métricas y conclusiones para público no técnico.
+## I. Selección del ataque base
 
+### 8.1 Identificación del ataque observado
+
+Seleccione **un ataque concreto** ejecutado en el laboratorio.
+Ejemplos válidos:
+
+* Uso no habitual de `sudo` desde una sesión remota.
+* Ejecución de comandos sospechosos (`whoami`, `id`, `uname`).
+* Acceso inicial seguido de escalada de privilegios.
+
+Documente brevemente:
+
+* Nodo afectado.
+* Técnica MITRE asociada (ej. T1059, T1548).
+* Regla(s) de Wazuh que lo detectaron.
+
+> **Este ataque será la base del KPI.**
+
+---
+
+## II. Definición del KPI operativo
+
+### 8.2 Diseño del KPI
+
+El KPI debe responder a una pregunta **accionable**, por ejemplo:
+
+> “¿Con qué frecuencia se detectan intentos de escalada de privilegios desde accesos remotos?”
+
+Defina el KPI con la siguiente estructura:
+
+* **Nombre del KPI**
+* **Descripción**
+* **Evento o patrón que mide**
+* **Fuente de datos**
+* **Umbral operativo**
+* **Acción recomendada**
+
+#### Ejemplo de definición
+
+**KPI:**
+`Intentos de escalada de privilegios no esperados`
+
+**Descripción:**
+Mide el número de eventos donde se detecta uso de `sudo` o cambio de privilegios en nodos que no deberían realizar tareas administrativas.
+
+**Fuente:**
+Wazuh – reglas relacionadas con `sudo` (`rule.id` correspondiente).
+
+**Frecuencia de medida:**
+Tiempo real / revisión diaria.
+
+---
+
+## III. Implementación del KPI en Wazuh
+
+### 8.3 Identificación del patrón en Wazuh
+
+Acceda al Dashboard:
+
+☰ → Threat Hunting → Events
+
+Filtre por:
+
+* `agent.name`: nodo Snort
+* `rule.description` o `full_log` conteniendo `sudo`
+* Rango temporal: últimos ejercicios
+
+Verifique que el patrón es **repetible y reconocible**.
+
+---
+
+### 8.4 Definición de umbrales
+
+Defina un umbral simple y claro:
+
+Ejemplo:
+
+* **0–1 eventos / día:** comportamiento esperado.
+* **2–3 eventos / día:** revisión manual.
+* **>3 eventos / día:** posible incidente → escalar.
+
+Este umbral es parte del KPI y lo convierte en **operativo**, no solo informativo.
+
+---
+
+## IV. KPI orientado a la reacción del SOC
+
+### 8.5 Playbook simplificado asociado al KPI
+
+Documente los pasos que **otro analista** debe seguir cuando el KPI supera el umbral.
+
+Ejemplo:
+
+**Cuando el KPI se activa (>3 eventos):**
+
+1. Verificar el `agent.name` afectado.
+2. Comprobar el usuario que ejecuta `sudo`.
+3. Revisar si la IP origen es conocida.
+4. Correlacionar con:
+
+   * Eventos de autenticación.
+   * Actividad previa (ejecución de comandos).
+5. Clasificar:
+
+   * Falso positivo.
+   * Incidente real.
+
+> Este bloque es clave: convierte el KPI en **tiempo ahorrado**.
+
+---
+
+## V. Validación del KPI con datos reales
+
+### 8.6 Validación en el laboratorio
+
+Utilice los eventos ya generados para:
+
+* Contar cuántas veces se cumple el patrón.
+* Ver si el KPI se activaría.
+* Evaluar si el umbral es razonable.
+
+Documente:
+
+* Número de eventos detectados.
+* Si se habría escalado o no.
+* Qué decisión se tomaría.
+
+---
+
+## VI. Reporte para público no técnico
+
+### 8.7 Traducción ejecutiva
+
+Ejemplo de conclusión:
+
+> Se ha definido un indicador que permite detectar de forma temprana intentos de escalada de privilegios en sistemas monitorizados.
+>
+> Este indicador permite reducir el tiempo de análisis, ya que asocia directamente un patrón de comportamiento con una serie de acciones predefinidas, mejorando la capacidad de respuesta del SOC ante accesos no autorizados.
+
+---
+
+## VII. Evidencias a entregar
+
+* Evento real usado como base del KPI.
+* Capturas de filtros en Wazuh.
+* Definición del KPI (nombre, umbral, acción).
+* Ejemplo de activación del KPI.
+* Playbook simplificado de reacción.
+
+---
+
+## VIII. Conclusión técnica
+
+Incluya:
+
+* Valor del KPI en un SOC real.
+* Qué problema resuelve.
+* Cómo reduce MTTD / MTTR.
+* Posibles mejoras futuras (automatización, SOAR).
 
 ---
 
@@ -1106,3 +1496,4 @@ Actividad opcional orientada a:
 ###### © NICS LAB — NICS | CyberLab
 
 Proyecto experimental para entornos de laboratorio y formación en ciberseguridad.
+

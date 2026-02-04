@@ -18,7 +18,7 @@ DEPLOY_DIR="${PROJECT_ROOT}/deploy"
 IMG_DIR="${DEPLOY_DIR}/img"
 KEYS_DIR="${DEPLOY_DIR}/keys"
 CLOUDINIT_DIR="${DEPLOY_DIR}/cloud-init"
-PASS_FILE="${CLOUDINIT_DIR}/set-password.yml"
+PASS_FILE="${CLOUDINIT_DIR}/passwd-os.yml"
 
 # OpenRC expected by install script
 OPENRC_DEFAULT="${PROJECT_ROOT}/admin-openrc.sh"

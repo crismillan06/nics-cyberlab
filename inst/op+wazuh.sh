@@ -54,7 +54,7 @@ ROUTER_NAME="router_private_01"
 INSTANCE_NAME="wazuh-manager"
 SSH_USER="debian"
 SSH_KEY_PATH="$PWD/deploy/keys/${KEY_NAME}.pem"
-USERDATA_FILE="$PWD/deploy/cloud-init/set-password.yml"
+USERDATA_FILE="$PWD/deploy/cloud-init/passwd-os.yml"
 KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
 
 echo "[✔] Keypair privado: $SSH_KEY_PATH"
