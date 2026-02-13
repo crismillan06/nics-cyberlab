@@ -1,0 +1,71 @@
+F# =========================
+# Seguridad / credenciales
+# =========================
+admin-openrc.sh
+deploy/admin-openrc.sh
+
+# clouds / kolla (por si algún día los copias al repo)
+clouds.yaml
+deploy/clouds.yaml
+passwords.yml
+deploy/passwords.yml
+*.openrc
+*.rc
+
+# =========================
+# Entornos virtuales / Python
+# =========================
+openstack_venv/
+deploy/openstack_venv/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# =========================
+# Requirements (tu script lo genera)
+# =========================
+requirements.txt
+deploy/requirements.txt
+
+# =========================
+# Artefactos descargados / generados por openstack-resources.sh
+# =========================
+# Imágenes cloud y temporales
+img/
+deploy/img/
+*.qcow2
+*.img
+*.raw
+*.tar.xz
+
+# Keypairs / claves
+keys/
+deploy/keys/
+*.pem
+*.pem.pub
+*.key
+*.pub
+
+# Cloud-init generado (contiene passwords)
+cloud-init/passwd-*.yml
+deploy/cloud-init/passwd-*.yml
+
+# =========================
+# Logs / temporales / backups
+# =========================
+log/
+logs/
+*.log
+*.log-*
+*.bak
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# =========================
+# GUI 
+# =========================
+/gui/

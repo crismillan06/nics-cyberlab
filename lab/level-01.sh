@@ -200,7 +200,7 @@ ssh_user_from_os() {
     ubuntu) echo "ubuntu" ;;
     debian) echo "debian" ;;
     kali)   echo "kali" ;;
-    *)      echo "debian" ;; # fallback típico en tus imágenes
+    *)      echo "debian" ;; # fallback típico
   esac
 }
 
@@ -228,7 +228,6 @@ password_for_server_from_userdata() {
   os="$(os_id_from_image "$img")"
   p="$(extract_password_from_password_os_yml "$userdata" "$os")"
 
-  # Fallback por si no se puede extraer del YAML
   if [[ -z "${p:-}" ]]; then
     case "$os" in
       ubuntu) p="ubuntu123" ;;
@@ -281,7 +280,6 @@ OPENRC_FILE="${BASE_DIR}/admin-openrc.sh"
 KEY_NAME="my_key"
 SSH_KEY_PATH="${BASE_DIR}/deploy/keys/${KEY_NAME}.pem"
 
-# YAML centralizado
 USERDATA_FILE="${BASE_DIR}/deploy/cloud-init/passwd-os.yml"
 
 SUBNET_PRIVATE="subnet_net_private_01"
@@ -330,7 +328,7 @@ wait $PID_CALDERA
 echo "[✔] Todas las instancias levantadas y SSH disponible."
 
 # ======================================
-# POST | Instalación de Nmap en Caldera
+# POST | Instalación de Nmap + Hydra + SecLists en Caldera
 # ======================================
 ensure_floating_ip_if_missing "caldera-server" "$PRIVATE_CIDR" "$NETWORK_EXTERNAL"
 
@@ -344,11 +342,115 @@ echo "[✔] caldera-server: private=${CALDERA_PRIV} | external=${CALDERA_EXT:-N/
 wait_ssh "$CALDERA_SSH_IP" "$CALDERA_SSH_USER" "$SSH_KEY_PATH" 300
 
 ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" "$CALDERA_SSH_USER@$CALDERA_SSH_IP" <<'EOF'
-set -e
+set -euo pipefail
+
+WORDLIST_OFFICIAL="/snap/seclists/current/Passwords/Common-Credentials/Pwdb_top-10000000.txt"
+OUTDIR="${HOME}/wordlists"
+
+log()  { echo -e "[+] $*"; }
+ok()   { echo -e "[✔] $*"; }
+warn() { echo -e "[!] $*"; }
+err()  { echo -e "[✖] $*" >&2; }
+
+need_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+log "Actualizando índices APT..."
 sudo apt-get update -y
-sudo apt-get install -y nmap
-echo "[✔] nmap instalado correctamente en caldera-server"
+
+# --- Ubuntu: asegurar 'universe' (Hydra suele estar ahí) ---
+if [[ -r /etc/os-release ]]; then
+  . /etc/os-release
+  if [[ "${ID:-}" == "ubuntu" ]]; then
+    if ! grep -RhsE '^[[:space:]]*deb .* universe' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null | grep -q universe; then
+      warn "Repositorio 'universe' no detectado. Intentando habilitarlo..."
+      sudo apt-get install -y software-properties-common
+      sudo add-apt-repository -y universe
+      sudo apt-get update -y
+      ok "Repositorio 'universe' habilitado."
+    else
+      ok "Repositorio 'universe' ya estaba habilitado."
+    fi
+  fi
+fi
+
+# --- Instalar herramientas (tipo nmap) ---
+log "Instalando herramientas base (nmap, hydra, snapd)..."
+sudo apt-get install -y nmap hydra snapd
+
+ok "nmap:  $(command -v nmap)"
+ok "hydra: $(command -v hydra)"
+
+# --- Asegurar snapd activo ---
+if need_cmd systemctl; then
+  sudo systemctl enable --now snapd >/dev/null 2>&1 || true
+  sudo systemctl enable --now snapd.socket >/dev/null 2>&1 || true
+fi
+
+if ! need_cmd snap; then
+  err "snap no está disponible tras instalar snapd. Revisa snapd/systemd en la imagen."
+  exit 1
+fi
+ok "snap:  $(command -v snap)"
+
+# --- Instalar SecLists vía snap ---
+if snap list 2>/dev/null | awk '{print $1}' | grep -qx seclists; then
+  ok "SecLists (snap) ya está instalado."
+else
+  log "Instalando SecLists vía snap..."
+  sudo snap install seclists
+  ok "SecLists instalado."
+fi
+
+# --- Validar wordlist oficial ---
+log "Verificando wordlist oficial..."
+if [[ -f "${WORDLIST_OFFICIAL}" ]]; then
+  ok "Wordlist oficial encontrada: ${WORDLIST_OFFICIAL}"
+else
+  warn "No se encontró en la ruta esperada: ${WORDLIST_OFFICIAL}"
+  log "Buscando alternativa dentro del snap..."
+  ALT="$(sudo find /snap/seclists -type f -name 'Pwdb_top-10000000.txt' 2>/dev/null | head -n 1 || true)"
+  if [[ -n "${ALT}" && -f "${ALT}" ]]; then
+    ok "Encontrada alternativa: ${ALT}"
+    WORDLIST_OFFICIAL="${ALT}"
+  else
+    err "No se pudo localizar 'Pwdb_top-10000000.txt' dentro de /snap/seclists."
+    err "Revisa que el snap seclists esté correctamente instalado."
+    exit 1
+  fi
+fi
+
+# --- Preparar directorio y subsets TOP ---
+log "Preparando directorio de wordlists: ${OUTDIR}"
+mkdir -p "${OUTDIR}"
+
+TARGET_LINK="${OUTDIR}/Pwdb_top-10000000.txt"
+if [[ -L "${TARGET_LINK}" || -f "${TARGET_LINK}" ]]; then
+  ok "Wordlist local ya existe: ${TARGET_LINK}"
+else
+  ln -s "${WORDLIST_OFFICIAL}" "${TARGET_LINK}" 2>/dev/null || cp "${WORDLIST_OFFICIAL}" "${TARGET_LINK}"
+  ok "Wordlist preparada en: ${TARGET_LINK}"
+fi
+
+log "Generando subsets TOP (1k / 10k / 100k)..."
+head -n 1000   "${TARGET_LINK}" > "${OUTDIR}/pwdb_top_1k.txt"
+head -n 10000  "${TARGET_LINK}" > "${OUTDIR}/pwdb_top_10k.txt"
+head -n 100000 "${TARGET_LINK}" > "${OUTDIR}/pwdb_top_100k.txt"
+ok "Subsets creados en ${OUTDIR}"
+
+# --- Resumen remoto ---
+echo
+echo "================== RESUMEN CALDERA =================="
+ok "nmap:               $(command -v nmap)"
+ok "hydra:              $(command -v hydra)"
+ok "seclists (snap):     $(snap list 2>/dev/null | awk '$1=="seclists"{print $1" "$2" "$3}' || echo 'instalado')"
+ok "wordlist oficial:    ${WORDLIST_OFFICIAL}"
+ok "wordlist alumno:     ${TARGET_LINK}"
+echo "Subsets:"
+ls -lh "${OUTDIR}/pwdb_top_1k.txt" "${OUTDIR}/pwdb_top_10k.txt" "${OUTDIR}/pwdb_top_100k.txt" 2>/dev/null || true
+echo "======================================================"
 EOF
+
+echo "[✔] nmap + hydra + seclists instalados y wordlists preparadas en caldera-server"
 
 # ======================================
 # PRECHECK | Caldera listo + SG 8888
@@ -413,7 +515,6 @@ SNORT_SSH_USER="$(ssh_user_for_server "snort-server")"
 WAZUH_SSH_USER="$(ssh_user_for_server "wazuh-manager")"
 CALDERA_SSH_USER="$(ssh_user_for_server "caldera-server")"
 
-SNORT_SSH_PASS="$(password_for_server_from_userdata "snort-server" "$USERDATA_FILE")"
 WAZUH_SSH_PASS="$(password_for_server_from_userdata "wazuh-manager" "$USERDATA_FILE")"
 CALDERA_SSH_PASS="$(password_for_server_from_userdata "caldera-server" "$USERDATA_FILE")"
 
@@ -449,7 +550,7 @@ echo "Instancia           : snort-server"
 echo "Dashboard URL       : (no aplica; Snort es CLI)"
 echo "SSH                 : ssh -i ${SSH_KEY_PATH} ${SNORT_SSH_USER}@${SNORT_SSH_IP}"
 echo "Usuario (SSH)       : ${SNORT_SSH_USER}"
-echo "Password (SSH)      : ${SNORT_SSH_PASS}"
+echo "Password (SSH)      : ¿?"
 echo "Snort (captura)     : sudo snort -i ens3 -c /etc/snort/snort.lua -A alert_fast -k none -l /var/log/snort"
 echo "Alertas             : sudo tail -f /var/log/snort/alert_fast.txt"
 echo
@@ -461,7 +562,7 @@ echo "Password (dashboard): ${CALDERA_PASS}"
 echo "SSH                 : ssh -i ${SSH_KEY_PATH} ${CALDERA_SSH_USER}@${CALDERA_SSH_IP}"
 echo "Usuario (SSH)       : ${CALDERA_SSH_USER}"
 echo "Password (SSH)      : ${CALDERA_SSH_PASS}"
-echo "Nota                : nmap instalado en caldera-server"
+echo "Nota                : nmap + hydra + seclists instalados en caldera-server (wordlists en ~/wordlists)"
 echo
 echo "==============================================================="
 echo "[⏱] Tiempo total de ejecución: $(format_time_long "$overall_duration")"

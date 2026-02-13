@@ -76,6 +76,7 @@ KEYPAIR="my_key"
 KEYPAIR_PRIV_FILE="${KEYS_DIR}/${KEYPAIR}.pem"
 KEYPAIR_PUB_FILE="${KEYS_DIR}/${KEYPAIR}.pem.pub"
 
+PASS_FILE_SIMPLE="${CLOUDINIT_DIR}/passwd-simple.yml"
 PASS_FILE="${CLOUDINIT_DIR}/passwd-os.yml"
 
 # --------- FUNCIONES --------------------------
@@ -320,8 +321,10 @@ echo "-------------------------------------------"
 # ==============================================
 echo "🔹 Comprobando cloud-init..."
 
+# ---------- FICHERO 1: Password dinámico según SO ----------
 if [ ! -f "$PASS_FILE" ]; then
-  echo "[+] Creando fichero cloud-init..."
+  echo "[+] Creando fichero cloud-init avanzado..."
+
   cat > "$PASS_FILE" <<'EOF'
 #cloud-config
 chpasswd: { expire: False }
@@ -353,17 +356,35 @@ runcmd:
 
     systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
 
-    # Usuario principal (no root): primer UID>=1000 con shell válida
+    # Usuario principal
     USER="$(getent passwd | awk -F: '$3>=1000 && $7 !~ /(nologin|false)$/ {print $1; exit}')"
     [ -z "$USER" ] && USER="$(ls -1 /home 2>/dev/null | head -n 1)"
     [ -z "$USER" ] && USER="root"
 
     echo "${USER}:${PASS}" | chpasswd
 EOF
-  echo "[✔] Fichero cloud-init generado en: $PASS_FILE"
+
+  echo "[✔] Fichero generado: $PASS_FILE"
 else
-  echo "[✔] Fichero cloud-init existente en: $PASS_FILE"
+  echo "[✔] Fichero existente: $PASS_FILE"
 fi
+
+# ---------- FICHERO 2: Password fijo ----------
+if [ ! -f "$PASS_FILE_SIMPLE" ]; then
+  echo "[+] Creando fichero cloud-init simple..."
+
+  cat > "$PASS_FILE_SIMPLE" <<'EOF'
+#cloud-config
+password: soteria7
+chpasswd: { expire: False }
+ssh_pwauth: True
+EOF
+
+  echo "[✔] Fichero generado: $PASS_FILE_SIMPLE"
+else
+  echo "[✔] Fichero existente: $PASS_FILE_SIMPLE"
+fi
+
 echo "-------------------------------------------"
 
 # ==============================================
