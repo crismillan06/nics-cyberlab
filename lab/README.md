@@ -171,6 +171,8 @@ Además de su valor formativo, el Level-03 permite utilizar el laboratorio como 
 - **Escala humana:** trabajo individual o por equipos/roles.
 - **Escala pedagógica:** mayor realismo con incertidumbre controlada y objetivos simultáneos.
 
+---
+
 ## Normas generales del laboratorio
 
 Estas normas aplican a **todos los niveles** del laboratorio **NICS | CyberLab** y se han redactado para que tengan sentido directo en los ejercicios (simulación ofensiva controlada + defensa/SOC), alineando prácticas con **ENS (España)**, **NIS2 (UE)** y **RGPD (UE)**.
@@ -248,10 +250,6 @@ Al final de cada ejercicio, incluir:
 * **Acción realizada** (qué se ejecutó y dónde).
 * **Eventos generados/detectados** (qué reglas saltaron, severidad, correlación).
 * **Valor operativo SOC** (triage, hipótesis, respuesta, hardening/mejora propuesta).
-
----
-
-Perfecto, si lo que describes es **el resultado o el estado del entorno una vez desplegado**, lo podemos renombrar a algo como **“Estado tras el despliegue”** o **“Entorno resultante”**. Aquí te lo reescribo integrado en el README:
 
 ---
 
