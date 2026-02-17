@@ -2166,6 +2166,7 @@ Ejemplo:
 
 Este umbral es parte del KPI y lo convierte en **operativo**, no solo informativo.
 
+---
 
 ## Investigación Opcional — MITRE Caldera (profundización teórico-práctica)
 
@@ -2203,8 +2204,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 * Captura del agent + captura de la operación mostrando tasks y output (al menos 2 tasks).
 
----
-
 #### 2) Agents: estabilidad, permisos y “supervivencia”
 
 **Teoría (qué entender)**
@@ -2226,8 +2225,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 **Evidencia**
 
 * Captura de Agents (Alive/Last seen) + captura de tasks con éxito/fallo y su mensaje de error.
-
----
 
 #### 3) Abilities: qué hacen “de verdad” y qué requieren
 
@@ -2253,8 +2250,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 * Captura de cada task con output (o error) + 1 línea de nota por ability.
 
----
-
 #### 4) Adversaries: construir una ruta coherente
 
 **Teoría (qué entender)**
@@ -2279,8 +2274,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 * Captura del adversary (lista de abilities) + captura de la operación ejecutada (tasks y resultados).
 
----
-
 #### 5) Planners: misma ruta, resultados distintos
 
 **Teoría (qué entender)**
@@ -2303,8 +2296,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 * Tabla comparativa (2 ejecuciones) + capturas de ambas operaciones.
 
----
-
 #### 6) Facts y encadenamiento: cuando Caldera “usa lo aprendido”
 
 **Teoría (qué entender)**
@@ -2323,8 +2314,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 * Captura del fact + captura de la segunda task usando ese dato.
 
----
-
 #### 7) Parsers: evitar que todo sea “texto”
 
 **Teoría (qué entender)**
@@ -2341,8 +2330,6 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 **Evidencia**
 
 * Captura del output + párrafo proponiendo el dato a extraer, regex conceptual y utilidad.
-
----
 
 #### 8) Plugins: ampliar capacidades (sin entrar en instalación)
 
@@ -2361,9 +2348,7 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 **Evidencia**
 
-* Captura del listado + mini ficha del plugin (5–8 líneas).
-
----
+* Captura del listado + mini ficha del plugin.
 
 #### Plantilla de ejemplo
 
