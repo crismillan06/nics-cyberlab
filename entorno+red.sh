@@ -32,7 +32,3 @@ else
     echo "[✖] No se encontró 'admin-openrc.sh'."
     exit 1
 fi
-
-echo "==================================================================="
-echo "🔹 Construyendo reglas de iptables para el correcto funcionamiento de la red..."
-sudo bash "${DEPLOY_DIR}/setup-veth.sh"

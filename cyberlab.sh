@@ -55,6 +55,14 @@ log_block "INICIO DEL DESPLIEGUE DE NICS | CyberLab"
 echo "🚀 Iniciando despliegue de NICS | CyberLab..."
 
 # ===========================
+# PASO 0
+# ===========================
+log_block "PASO 0 | Reglas de red / iptables"
+sudo bash "${DEPLOY_DIR}/uplinkbridge.sh"
+echo "[✔] Reglas aplicadas."
+echo "------------------------------------------------------------"
+
+# ===========================
 # PASO 1
 # ===========================
 log_block "PASO 1 | Instalación de OpenStack"
@@ -92,17 +100,9 @@ if [[ -f "${BASE_DIR}/admin-openrc.sh" ]]; then
 fi
 
 # ===========================
-# PASO 4
-# ===========================
-log_block "PASO 4 | Reglas de red / iptables"
-sudo bash "${DEPLOY_DIR}/uplinkbridge.sh"
-echo "[✔] Reglas aplicadas."
-echo "------------------------------------------------------------"
-
-# ===========================
 # PASO 5
 # ===========================
-log_block "PASO 5 | Configuración inicial OpenStack"
+log_block "PASO 4 | Configuración inicial OpenStack"
 step_start=$(date +%s)
 
 bash "${DEPLOY_DIR}/openstack-resources.sh"
@@ -110,9 +110,9 @@ echo "[✔] Configuración completada en: $(timer $step_start)"
 echo "------------------------------------------------------------"
 
 # ===========================
-# PASO 6
+# PASO 5
 # ===========================
-log_block "PASO 6 | Arrancando Dashboard"
+log_block "PASO 5 | Arrancando Dashboard"
 step_start=$(date +%s)
 
 DASH_LOG="${LOG_DIR}/dashboard.log"
@@ -120,7 +120,7 @@ DASH_LOG="${LOG_DIR}/dashboard.log"
 bash "${GUI_DIR}/start_dashboard.sh" > "${DASH_LOG}" 2>&1 & 
 DASH_PID=$!
 
-echo "Accede al dashboard desde tu navegador:"
+echo "Acceso al dashboard de NICS | Cyberlab:"
 echo "[➜] http://localhost:5001"
 echo
 echo "[⚙️] Ejecutándose en segundo plano (PID: $DASH_PID)"
@@ -130,10 +130,12 @@ echo
 echo "[📜] Log del dashboard: tail -f ${DASH_LOG}"
 echo "------------------------------------------------------------"
 
+sleep 5
+
 # ===========================
 # INFO ACCESO
 # ===========================
-log_block "PARÁMETROS DE ACCESO"
+log_block "PARÁMETROS DE ACCESO A OPENSTACK:"
 
 AUTH_URL=$(grep -m1 "auth_url:" /etc/kolla/clouds.yaml | awk '{print $2}' | sed 's/:5000//')
 USERNAME=$(grep -m1 "username:" /etc/kolla/clouds.yaml | awk '{print $2}')
@@ -145,6 +147,8 @@ echo "Password:  ${PASSWORD}"
 echo "------------------------------------------------------------"
 
 deactivate 2>/dev/null || true
+
+sleep 5
 
 log_block "FIN DEL PROCESO"
 

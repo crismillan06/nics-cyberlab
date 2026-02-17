@@ -11,10 +11,14 @@ echo "🔹 Iniciando despliegue automatizado de OpenStack..."
 START_TIME=$(date +%s)
 
 # ============================================================
-# 1️⃣ CREAR ENTORNO VIRTUAL
+# 1 CREAR ENTORNO VIRTUAL
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="$SCRIPT_DIR/openstack_venv"
+
+echo "🔹 Deshabilitando actualizaciones automáticas (unattended-upgrades)..."
+sudo systemctl stop unattended-upgrades || true
+sudo systemctl disable unattended-upgrades || true
 
 echo "🔹 Creando entorno virtual en $VENV_PATH..."
 sudo apt update -y
@@ -33,17 +37,17 @@ python -m ensurepip --upgrade
 python -m pip install --upgrade pip setuptools wheel
 
 # ============================================================
-# 2️⃣ DEPENDENCIAS DEL SISTEMA
+# 2 DEPENDENCIAS DEL SISTEMA
 # ============================================================
 echo "🔹 Instalando dependencias del sistema..."
-sudo apt install -y git iptables bridge-utils wget curl dbus pkg-config \
+sudo apt install -y git wget curl dbus pkg-config \
 cmake build-essential libdbus-1-dev libglib2.0-dev sudo gnupg \
 apt-transport-https ca-certificates software-properties-common
 
 python -m pip install --no-cache-dir dbus-python docker
 
 # ============================================================
-# 3️⃣ CONFIGURACIÓN DOCKER
+# 3 CONFIGURACIÓN DOCKER
 # ============================================================
 echo "🔹 Configurando Docker..."
 sudo mkdir -p /etc/apt/keyrings
@@ -77,7 +81,7 @@ sudo usermod -aG docker "$USER"
 echo "[✔] Docker configurado correctamente."
 
 # ============================================================
-# 4️⃣ KOLLA-ANSIBLE Y DEPENDENCIAS PYTHON
+# 4 KOLLA-ANSIBLE Y DEPENDENCIAS PYTHON
 # ============================================================
 echo "🔹 Instalando dependencias Python y Kolla-Ansible..."
 REQ_FILE="$SCRIPT_DIR/requirements.txt"
@@ -165,7 +169,7 @@ pip install --no-cache-dir -r "$REQ_FILE" || { echo "❌ Fallo en instalación P
 echo "[✔] Dependencias Python instaladas correctamente."
 
 # ============================================================
-# 5️⃣ ARCHIVOS KOLLA
+# 5 ARCHIVOS KOLLA
 # ============================================================
 KOLLA_EXAMPLES="$VENV_PATH/share/kolla-ansible/etc_examples/kolla"
 KOLLA_INVENTORY="$VENV_PATH/share/kolla-ansible/ansible/inventory"
@@ -178,7 +182,7 @@ sudo chown -R "$USER:$USER" /etc/kolla
 echo "[✔] Archivos de configuración de Kolla copiados completamente."
 
 # ============================================================
-# 6️⃣ PASSWORDS Y GLOBALS
+# 6 PASSWORDS Y GLOBALS
 # ============================================================
 sudo chown "$USER:$USER" /etc/kolla/passwords.yml
 kolla-genpwd || true
@@ -220,7 +224,7 @@ echo "[✔] globals.yml generado automáticamente con éxito."
 export PATH="$VENV_PATH/bin:$PATH"
 
 # ============================================================
-# 7️⃣ COLECCIONES ANSIBLE
+# 7 COLECCIONES ANSIBLE
 # ============================================================
 echo "🔹 Instalando colecciones de Ansible Galaxy..."
 kolla-ansible install-deps
@@ -258,7 +262,7 @@ chmod +x "$MODPROBE_FILE"
 echo "[✔] Colecciones Ansible y fix de modprobe configurados."
 
 # ============================================================
-# 8️⃣ DESPLIEGUE OPENSTACK
+# 8 DESPLIEGUE OPENSTACK
 # ============================================================
 echo "🔹 Desplegando OpenStack..."
 kolla-ansible bootstrap-servers -i /etc/kolla/ansible/inventory/all-in-one
@@ -269,7 +273,7 @@ kolla-ansible post-deploy
 sudo chown -R "$USER:$USER" "$VENV_PATH"
 
 # ============================================================
-# 9️⃣ PERMISOS Y FINALIZACIÓN
+# 9 PERMISOS Y FINALIZACIÓN
 # ============================================================
 echo "🔹 Instalando cliente OpenStack..."
 pip install python-openstackclient -c https://releases.openstack.org/constraints/upper/master

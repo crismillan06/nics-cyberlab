@@ -20,6 +20,21 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # =========================
+# Instalar dependencias de red (prevención)
+# =========================
+echo "[*] Instalando dependencias: iptables, bridge-utils y iproute2..."
+apt update
+apt install -y iptables bridge-utils iproute2
+
+# =========================
+# Cargar módulos kernel necesarios
+# =========================
+echo "[*] Cargando módulos kernel necesarios: br_netfilter, iptable_nat, veth..."
+modprobe br_netfilter
+modprobe iptable_nat
+modprobe veth
+
+# =========================
 # Verificar existencia del script
 # =========================
 if [ ! -f "$SCRIPT_SRC" ]; then
