@@ -12,22 +12,17 @@
   - [Level-03 – Consolidación y escalado del laboratorio (madurez operativa)](#level-03--consolidación-y-escalado-del-laboratorio-madurez-operativa)
 - [Normas generales del laboratorio](#normas-generales-del-laboratorio)
 - [Metodología de trabajo y evidencias](#metodología-de-trabajo-y-evidencias)
-  - [Evidencias técnicas](#evidencias-técnicas)
-  - [Conclusión técnica](#conclusión-técnica)
-- [Escenario Level-01](#escenario-level-01)
-  - [Descripción del escenario](#descripción-del-escenario)
-  - [Arquitectura y roles](#arquitectura-y-roles)
-  - [Objetivos formativos](#objetivos-formativos)
-  - [Requisitos previos y ejecución del escenario](#requisitos-previos-y-ejecución-del-escenario)
-- [Ejercicio 1 – Snort: detección de tráfico ICMP](#ejercicio-1--snort-detección-de-tráfico-icmp)
-- [Ejercicio 2 – Wazuh: agentes, integración de logs y dashboard](#ejercicio-2--wazuh-agentes-integración-de-logs-y-dashboard)
-- [Ejercicio 3 – MITRE Caldera: ataque básico y detección en Wazuh](#ejercicio-3--mitre-caldera-ataque-básico-y-detección-en-wazuh)
-- [Ejercicio 4 – Simulación Mini SOC: escaneo de reconocimiento con Nmap](#ejercicio-4--simulación-mini-soc-escaneo-de-reconocimiento-con-nmap)
-- [Ejercicio 5 – Reglas personalizadas en Snort y Wazuh](#ejercicio-5--reglas-personalizadas-en-snort-y-wazuh)
-- [Ejercicio 6 – Ataque de fuerza bruta contra servicio SSH](#ejercicio-6--ataque-de-fuerza-bruta-contra-servicio-ssh)
-- [Ejercicio 7 – Diseño e implementación de estrategia defensiva ante ataques a SSH](#ejercicio-7--diseño-e-implementación-de-estrategia-defensiva-ante-ataques-a-ssh)
-- [Ejercicio 8 – Creación de un KPI operativo basado en un ataque real](#ejercicio-8--creación-de-un-kpi-operativo-basado-en-un-ataque-real)
-- [Investigación Opcional](#investigación-opcional)
+- [Requisitos previos y ejecución del escenario](#requisitos-previos-y-ejecución-del-escenario)
+---
+- [Ejercicio 1 — Snort: detección de tráfico ICMP](#ejercicio-1--snort-detección-de-tráfico-icmp)
+- [Ejercicio 2 — Wazuh: agentes, integración de logs y dashboard](#ejercicio-2--wazuh-agentes-integración-de-logs-y-dashboard)
+- [Ejercicio 3 — MITRE Caldera: ataque básico y detección en Wazuh](#ejercicio-3--mitre-caldera-ataque-básico-y-detección-en-wazuh)
+- [Ejercicio 4 — Simulación Mini SOC: escaneo de reconocimiento con Nmap](#ejercicio-4--simulación-mini-soc-escaneo-de-reconocimiento-con-nmap)
+- [Ejercicio 5 — Reglas personalizadas en Snort y Wazuh](#ejercicio-5--reglas-personalizadas-en-snort-y-wazuh)
+- [Ejercicio 6 — Ataque de fuerza bruta contra servicio SSH](#ejercicio-6--ataque-de-fuerza-bruta-contra-servicio-ssh)
+- [Ejercicio 7 — Diseño e implementación de estrategia defensiva ante ataques a SSH](#ejercicio-7--diseño-e-implementación-de-estrategia-defensiva-ante-ataques-a-ssh)
+- [Ejercicio 8 — Creación de un KPI operativo basado en un ataque real](#ejercicio-8--creación-de-un-kpi-operativo-basado-en-un-ataque-real)
+- [Investigación Opcional — MITRE Caldera (profundización teórico-práctica)](#investigación-opcional--mitre-caldera-profundización-teórico-práctica)
 
 ---
 
@@ -45,18 +40,64 @@ El laboratorio se estructura en **niveles progresivos**, donde cada nivel amplí
 
 ### Level-01 – Mini SOC: detección y monitorización
 
-Nivel orientado a la **aclimatación y familiarización** con herramientas clave de un SOC, mediante un entorno controlado desplegado en OpenStack.
+Nivel orientado a la **aclimatación y familiarización** con herramientas y tareas básicas de un **SOC**, mediante un entorno **controlado** desplegado en OpenStack. El foco del Level-01 no es “hacer de pentester”, sino **aprender el flujo operacional**: generar actividad → observar telemetría → investigar → documentar.
 
-**Nodos principales:**
-- **Nodo víctima (IDS):** Snort  
-- **Nodo monitor (SIEM/XDR):** Wazuh (Manager + Dashboard)  
-- **Nodo atacante (Adversary Emulation):** MITRE Caldera  
+#### **Nodos principales**
 
-En este nivel se trabaja como analista SOC junior, aprendiendo a:
-- Detectar tráfico y actividad sospechosa.
-- Analizar logs y alertas.
-- Correlacionar eventos en un SIEM/XDR.
-- Documentar evidencias y conclusiones técnicas.
+* **Nodo víctima (IDS):** Snort _v.3.10.2.0_
+  * Configuración de recursos _(mínimo requerido)_:
+    * 1CPU
+    * 2GB de RAM
+    * 20GB de Disco
+  
+* **Nodo monitor (SIEM/XDR):** Wazuh _v._ (Manager + Dashboard) 
+  * Configuración de recursos _(mínimo requerido)_:
+    * 2CPU
+    * 4GB de RAM
+    * 40GB de Disco
+
+* **Nodo atacante (Adversary Emulation):** MITRE Caldera _v._ 
+  * Configuración de recursos _(mínimo requerido)_:  
+    * 1CPU
+    * 2GB de RAM
+    * 20GB de Disco
+
+**Flujo operativo (qué se entrena)**
+
+1. **Generación de actividad** (tráfico y acciones controladas).
+2. **Detección primaria** (alertas IDS / logs).
+3. **Ingesta y correlación** en SIEM/XDR (eventos centralizados).
+4. **Investigación rápida** (búsqueda, filtros, timeline).
+5. **Evidencias + conclusión** (qué pasó, por qué importa, cómo se mejora).
+
+**Qué aprende el alumnado (competencias)**
+
+* Detectar tráfico y actividad sospechosa en un entorno realista.
+* Localizar y analizar **logs**, eventos y alertas.
+* Correlacionar eventos (relación **origen → acción → evidencia → alerta**).
+* Documentar evidencias con criterio (capturas, timestamps, agente, regla, severidad).
+
+#### Expliación del escenario
+
+Este Level-01 se apoya en un “mini SOC” con ruta simple, pero suficiente para entender el ciclo completo.
+
+**Nodos / componentes**
+
+* **Atacante (emulación controlada):** genera acciones representativas (p. ej. comandos remotos, reconocimiento, pruebas de conectividad).
+* **Víctima (telemetría + IDS):** inspecciona tráfico y genera alertas (IDS) + eventos de sistema.
+* **Monitor (SIEM/XDR):** centraliza, normaliza y permite investigar (dashboards, hunting, eventos).
+
+**Flujo didáctico**
+
+1. **Provoca actividad** desde el nodo atacante (tráfico y/o ejecución controlada).
+2. **Comprueba** si Snort genera alertas (visibilidad inmediata en logs).
+3. **Integra y valida** que Wazuh recibe esa telemetría (agente activo + eventos).
+4. **Investiga** en Wazuh (Threat Hunting / Events) filtrando por agente y rango temporal.
+5. **Entrega evidencias** (capturas de alertas/eventos + detalle de regla y severidad) y redacta **conclusión técnica**.
+
+#### Nota importante (alcance y recursos)
+
+El Level-01 está diseñado para ser **simple y consistente**: prioriza que el alumnado domine el flujo end-to-end antes de añadir complejidad. Aun así, el mismo esquema permite crecer en dificultad según recursos disponibles (más fuentes de logs, más reglas, más escenarios, más volumen de eventos), sin cambiar la base del laboratorio.
 
 ### Level-02 – Threat Intelligence y análisis de IOCs (MISP)
 
@@ -79,7 +120,7 @@ Nivel enfocado en **ciberinteligencia aplicada (CTI)**. Reutiliza el escenario d
 - **Víctima + telemetría:** sistema objetivo monitorizado para extraer evidencias e IOCs.
 - **Capa defensiva (si aplica):** monitorización centralizada para investigación y hunting.
 
-**Flujo didáctico (qué hace el alumno)**
+**Flujo didáctico**
 1. Ejecuta una **ruta de ataque** (reconocimiento → acceso/explotación → acciones posteriores mínimas).
 2. Identifica evidencias e indicadores (IPs/puertos, usuarios, timestamps, patrones en logs, etc.).
 3. Crea un **evento en MISP** que represente esa ruta (atributos bien tipados + contexto + referencias).
@@ -129,6 +170,140 @@ Además de su valor formativo, el Level-03 permite utilizar el laboratorio como 
 - **Escala operativa:** severidades, priorización, escalado y mejora continua.
 - **Escala humana:** trabajo individual o por equipos/roles.
 - **Escala pedagógica:** mayor realismo con incertidumbre controlada y objetivos simultáneos.
+
+## Normas generales del laboratorio
+
+Estas normas aplican a **todos los niveles** del laboratorio **NICS | CyberLab** y se han redactado para que tengan sentido directo en los ejercicios (simulación ofensiva controlada + defensa/SOC), alineando prácticas con **ENS (España)**, **NIS2 (UE)** y **RGPD (UE)**.
+
+### 1) Alcance, autorización y uso aceptable (NICS | CyberLab)
+
+* **Uso exclusivamente educativo** y **solo dentro del entorno autorizado** (proyecto OpenStack/laboratorio asignado).
+* Queda **prohibido** ejecutar técnicas, herramientas o tráfico ofensivo **fuera del laboratorio** (infraestructura externa, redes corporativas, terceros, etc.).
+* La actividad “red” (Caldera/Nmap/Hydra/…) se considera **simulación controlada**: se limita a lo necesario para generar telemetría y evidencias SOC (sin objetivos “de impacto”).
+* **Reglas de Engagement (RoE) de laboratorio**:
+
+  * sin DoS/estrés deliberado,
+  * sin persistencia innecesaria,
+  * sin exfiltración de datos,
+  * sin escaneo masivo fuera del rango/objetivo indicado,
+  * sin reutilizar credenciales fuera del entorno.
+
+### 2) Principios operativos tipo ENS (seguridad por diseño en el LAB)
+
+En los ejercicios se trabaja bajo un enfoque de **gestión de riesgos** y ciclo **prevención → detección → respuesta → recuperación**, con trazabilidad y control del cambio. ([Boletín Oficial del Estado](https://www.boe.es/buscar/act.php?id=BOE-A-2022-7191))
+
+Aplicación práctica en el LAB:
+
+* **Mínimo privilegio**: usar cuentas/roles justos para cada tarea (y documentar cuándo/por qué se eleva).
+* **Trazabilidad**: todo cambio relevante (reglas Snort/Wazuh, parsers, configuración) debe quedar reflejado en evidencias.
+* **Reversibilidad**: si se activa una regla o ajuste, se registra el *antes/después* y cómo se revierte.
+
+### 3) Gestión de incidentes y notificación (NIS2)
+
+[NIS2](https://www.nis-2-directive.com/) introduce disciplina de **notificación por fases**. En el laboratorio **no se notifica a autoridades**, pero **se entrena el formato** como entregable:
+
+* **Aviso temprano (early warning)**,
+* **Notificación de incidente**,
+* **Informe final** (y, si procede, **intermedios/progreso**).
+
+Regla didáctica (para que encaje con los ejercicios):
+
+* Si un ejercicio genera una “ruta coherente” (p. ej. Recon → Acceso → Post-Access), el alumnado redacta:
+
+  1. **Early warning** (qué ha pasado + impacto potencial + si parece malicioso),
+  2. **Notificación** (IOCs, severidad, alcance, medidas iniciales),
+  3. **Informe final** (timeline, causa probable, contención/mitigación, lecciones aprendidas).
+
+### 4) Protección de datos y tratamiento de evidencias (RGPD)
+
+En el LAB, por defecto:
+
+* **No se usan datos personales reales**. Si por diseño del ejercicio aparece información potencialmente personal (usuarios, IPs asociables, logs con identificadores), se aplica **minimización** en el entregable (capturas, informes).
+* Las evidencias se almacenan en ubicación controlada (repositorio/carpeta del curso) y con acceso restringido a quienes “necesitan saber” (principio de **confidencialidad**).
+
+**Brechas de datos (en modo formación):** si un escenario simula exposición/compromiso de datos, el alumnado debe elaborar un **borrador de notificación** (qué datos, alcance, medidas), entrenando la lógica de RGPD (notificación “sin dilación indebida” y, cuando aplique, en el marco temporal establecido).
+
+---
+
+## Metodología de trabajo y evidencias
+
+Para **cada ejercicio**, se entrega obligatoriamente:
+
+### Evidencias técnicas
+
+* **Capturas de terminal** (comandos + salida).
+* **Logs relevantes** (Snort, Wazuh, sistema, Caldera tasks/output).
+* **Capturas de dashboard** cuando aplique (filtros visibles).
+
+Cada evidencia debe permitir reconstruir:
+
+* **Nodo implicado** (hostname/agent.name).
+* **Herramienta/acción** (comando, ability, rule.id).
+* **Momento del ejercicio** (timestamp o rango temporal del dashboard).
+
+### Conclusión técnica
+
+Al final de cada ejercicio, incluir:
+
+* **Acción realizada** (qué se ejecutó y dónde).
+* **Eventos generados/detectados** (qué reglas saltaron, severidad, correlación).
+* **Valor operativo SOC** (triage, hipótesis, respuesta, hardening/mejora propuesta).
+
+---
+
+Perfecto, si lo que describes es **el resultado o el estado del entorno una vez desplegado**, lo podemos renombrar a algo como **“Estado tras el despliegue”** o **“Entorno resultante”**. Aquí te lo reescribo integrado en el README:
+
+---
+
+## Requisitos previos y ejecución del escenario
+
+### Entorno de hardware y recursos del laboratorio
+
+| Componente               | Equipo anfitrión (Host)                   | VM local (usada en pruebas) | Mínimo recomendado | Recomendado       |
+| ------------------------ | ----------------------------------------- | --------------------------- | ------------------ | ----------------- |
+| **CPU**                  | AMD Ryzen 7 9800X3D (8C/16T, 4.7/5.2 GHz) | 8 vCPU                      | 4 vCPU             | 8 vCPU            |
+| **Memoria RAM**          | 32 GB DDR5                                | 12–16 GB                    | 8 GB               | 16 GB             |
+| **Almacenamiento**       | SSD 2 TB NVMe                             | 120 GB                      | 80 GB              | 120–150 GB        |
+| **Tipo de disco**        | SSD NVMe                                  | SSD virtual                 | SSD                | SSD NVMe          |
+| **Virtualización**       | AMD-V habilitado en BIOS                  | —                           | Soportada por CPU  | Soportada por CPU |
+| **Sistema Operativo**    | Windows / Linux (64 bits)                 | Linux 64 bits               | Linux 64 bits      | Linux 64 bits     |
+| **Red**                  | Conectividad a Internet                   | Bridge o NAT                | NAT                | Bridge            |
+| **Aceleración hardware** | Activada                                  | —                           | Activada           | Activada          |
+
+#### 🔹 Notas:
+
+* Este entorno asegura que los scripts del laboratorio se ejecuten correctamente y sin interrupciones.
+* La VM con 12–16 GB de RAM y 8 vCPU permite desplegar instancias de OpenStack, ejecutar clientes y orquestar nodos del laboratorio con fluidez.
+* El almacenamiento SSD reduce significativamente los tiempos de despliegue y manejo de logs.
+* La virtualización debe estar habilitada en BIOS para garantizar compatibilidad con OpenStack y la VM.
+
+### Entorno resultante tras el despliegue de ``level-01.sh``
+
+Al finalizar el escenario, el usuario dispondrá de:
+
+* Acceso a **OpenStack** (proyecto, red, cuotas).
+* **Clave SSH** operativa.
+* **Security Groups** configurados para:
+
+  * SSH (22) desde la IP de administración.
+  * Acceso a dashboards (Wazuh/Caldera/MISP según nivel).
+  * Conectividad **entre nodos** del laboratorio (solo lo necesario para el escenario).
+
+### Ejecución del escenario
+
+Desde el repositorio raíz:
+
+```bash
+cd nics-cyberlab/
+chmod +x lab/level-01.sh
+bash lab/level-01.sh
+```
+
+### Acceso a credenciales e IPs
+
+```bash
+cat log/level.log
+```
 
 ---
 
@@ -1992,225 +2167,7 @@ Ejemplo:
 * **>3 eventos / día:** posible incidente → escalar.
 
 Este umbral es parte del KPI y lo convierte en **operativo**, no solo informativo.
-# 🧪 Laboratorio Práctico con Diferentes Niveles — NICS | CyberLab
 
-> **Aviso de uso responsable:** todo lo descrito está orientado a un **entorno de laboratorio autorizado y controlado**. No reutilice procedimientos fuera de un contexto permitido.
-
----
-
-## Índice
-- [Introducción](#introducción)
-- [Visión general de los escenarios](#visión-general-de-los-escenarios)
-  - [Level-01 – Mini SOC: detección y monitorización](#level-01--mini-soc-detección-y-monitorización)
-  - [Level-02 – Threat Intelligence y análisis de IOCs (MISP)](#level-02--threat-intelligence-y-análisis-de-iocs-misp)
-  - [Level-03 – Consolidación y escalado del laboratorio (madurez operativa)](#level-03--consolidación-y-escalado-del-laboratorio-madurez-operativa)
-- [Normas generales del laboratorio](#normas-generales-del-laboratorio)
-- [Metodología de trabajo y evidencias](#metodología-de-trabajo-y-evidencias)
-  - [Evidencias técnicas](#evidencias-técnicas)
-  - [Conclusión técnica](#conclusión-técnica)
-- [Escenario Level-01](#escenario-level-01)
-  - [Descripción del escenario](#descripción-del-escenario)
-  - [Arquitectura y roles](#arquitectura-y-roles)
-  - [Objetivos formativos](#objetivos-formativos)
-  - [Requisitos previos y ejecución del escenario](#requisitos-previos-y-ejecución-del-escenario)
-- [Ejercicio 1 – Snort: detección de tráfico ICMP](#ejercicio-1--snort-detección-de-tráfico-icmp)
-- [Ejercicio 2 – Wazuh: agentes, integración de logs y dashboard](#ejercicio-2--wazuh-agentes-integración-de-logs-y-dashboard)
-- [Ejercicio 3 – MITRE Caldera: ataque básico y detección en Wazuh](#ejercicio-3--mitre-caldera-ataque-básico-y-detección-en-wazuh)
-- [Ejercicio 4 – Simulación Mini SOC: escaneo de reconocimiento con Nmap](#ejercicio-4--simulación-mini-soc-escaneo-de-reconocimiento-con-nmap)
-- [Ejercicio 5 – Reglas personalizadas en Snort y Wazuh](#ejercicio-5--reglas-personalizadas-en-snort-y-wazuh)
-- [Ejercicio 6 – Ataque de fuerza bruta contra servicio SSH](#ejercicio-6--ataque-de-fuerza-bruta-contra-servicio-ssh)
-- [Ejercicio 7 – Diseño e implementación de estrategia defensiva ante ataques a SSH](#ejercicio-7--diseño-e-implementación-de-estrategia-defensiva-ante-ataques-a-ssh)
-- [Ejercicio 8 – Creación de un KPI operativo basado en un ataque real](#ejercicio-8--creación-de-un-kpi-operativo-basado-en-un-ataque-real)
-- [Investigación Opcional](#investigación-opcional)
-
----
-
-## Introducción
-
-Este documento recoge los **escenarios prácticos y ejercicios** asociados a los distintos niveles del laboratorio **NICS | CyberLab**. El objetivo es guiar prácticas **realistas, progresivas y alineadas con el trabajo de un SOC**, combinando simulación ofensiva controlada y capacidades defensivas (detección, correlación y mejora).
-
-Cada nivel parte de un despliegue automatizado y refuerza el ciclo operativo:
-
-**detección → investigación → mejora → reporte**
-
----
-
-## Visión general de los escenarios
-
-El laboratorio se estructura en **niveles progresivos**, donde cada nivel amplía o profundiza en los conceptos del anterior.
-
----
-
-### Level-01 – Mini SOC: detección y monitorización
-
-Nivel orientado a la **aclimatación y familiarización** con herramientas clave de un SOC, mediante un entorno controlado desplegado en OpenStack.
-
-**Nodos principales:**
-- **Nodo víctima (IDS):** Snort  
-- **Nodo monitor (SIEM/XDR):** Wazuh (Manager + Dashboard)  
-- **Nodo atacante (Adversary Emulation):** MITRE Caldera  
-
-En este nivel se trabaja como analista SOC junior, aprendiendo a:
-- Detectar tráfico y actividad sospechosa.
-- Analizar logs y alertas.
-- Correlacionar eventos en un SIEM/XDR.
-- Documentar evidencias y conclusiones técnicas.
-
----
-
-### Level-02 – Threat Intelligence y análisis de IOCs (MISP)
-
-Nivel enfocado en **ciberinteligencia aplicada (CTI)**. Reutiliza el escenario del Level-01 e incorpora **MISP** como plataforma para transformar eventos del laboratorio en **inteligencia reutilizable**.
-
-**Objetivos principales del Level-02**
-- **Extraer IOCs** desde ataques reales ejecutados en el LAB: IPs origen/destino, puertos, usuarios, patrones, rutas de ataque y timestamps.
-- **Estructurar esa información en MISP** como eventos consistentes (uno por ataque o por ruta completa).
-- **Enriquecer y contextualizar** los indicadores (qué significa, fase del ataque, relevancia vs ruido).
-- **Relacionar la inteligencia** con marcos (p. ej. MITRE ATT&CK) para que no se quede en una lista de indicadores.
-- **Reutilizar la CTI** para hunting, priorización y mejora de detecciones (reglas, dashboards, playbooks), según recursos disponibles.
-
-#### Ejemplo de escenario posible (referencia)
-
-> Este es **un ejemplo** de cómo puede evolucionar el laboratorio en Level-02. No es el único diseño posible.
-
-**Nodos / componentes**
-- **MISP (CTI):** repositorio central de eventos, indicadores y contexto.
-- **Atacante (entorno ofensivo):** ejecución de herramientas de reconocimiento/explotación.
-- **Víctima + telemetría:** sistema objetivo monitorizado para extraer evidencias e IOCs.
-- **Capa defensiva (si aplica):** monitorización centralizada para investigación y hunting.
-
-**Flujo didáctico (qué hace el alumno)**
-1. Ejecuta una **ruta de ataque** (reconocimiento → acceso/explotación → acciones posteriores mínimas).
-2. Identifica evidencias e indicadores (IPs/puertos, usuarios, timestamps, patrones en logs, etc.).
-3. Crea un **evento en MISP** que represente esa ruta (atributos bien tipados + contexto + referencias).
-4. Usa ese evento como base para hunting y propuestas de mejora en detección (según el stack defensivo disponible).
-
-#### Nota importante (alcance y recursos)
-
-Las posibilidades son **prácticamente infinitas**, pero el diseño final depende de los **recursos disponibles** (capacidad del entorno, tiempo de práctica, complejidad asumible, herramientas desplegadas e integraciones deseadas).
-
----
-
-### Level-03 – Consolidación y escalado del laboratorio (madurez operativa)
-
-El **Level-03** está pensado para dar el salto desde un laboratorio “por ejercicios” a un entorno **más cercano a operación real**: no se limita a ejecutar tareas guiadas, sino que entrena la capacidad de **priorizar, investigar, responder y mejorar** de forma estructurada.
-
-Este nivel también plantea el laboratorio como una base **reutilizable y adaptable**: puede emplearse tanto en formación como en contextos profesionales, ajustando alcance y complejidad según los recursos disponibles.
-
-#### Enfoque del Level-03
-
-- **Madurez operativa:** trabajar con decisiones (qué es prioritario, qué se escala, qué se cierra).
-- **Coherencia end-to-end:** enlazar ataque → detección → investigación → respuesta → mejora continua.
-- **Escalabilidad:** crecer en complejidad sin rehacer la base (más visibilidad, más casos, más equipos, más exigencia).
-
-#### Qué persigue el alumnado / participante
-
-- Formular una **hipótesis completa** de lo que ocurre (no solo “alertas sueltas”).
-- Convertir señales dispersas en un **caso investigable** con línea temporal.
-- Hacer **triage** razonable (ruido vs incidente).
-- Proponer una **respuesta** y justificarla (contención, mitigación, hardening).
-- Traducir lo aprendido en **mejoras concretas** (detección, procedimientos, métricas).
-
-#### Escenario (deliberadamente abierto)
-
-- Actividad legítima + actividad sospechosa mezcladas.
-- Señales en distintas fases (reconocimiento, acceso, abuso, persistencia o movimientos), sin “contarlo todo” desde el principio.
-- El participante reconstruye la historia con evidencias y toma decisiones.
-
-#### Usos ampliados (más allá de “solo formación”)
-
-Además de su valor formativo, el Level-03 permite utilizar el laboratorio como entorno controlado para:
-
-- **Probar herramientas nuevas**: evaluar telemetría, ruido/falsos positivos y encaje en el flujo de trabajo.
-- **Testear simulaciones y rutas de ataque**: validar cobertura, impacto y puntos ciegos; preparar simulaciones controladas tipo pentesting.
-- **Ensayar cambios antes de aplicarlos fuera del laboratorio**: tuning, hardening, procedimientos y validación de mejoras.
-
-#### Escalabilidad (según recursos disponibles)
-
-- **Escala técnica:** más visibilidad y fuentes de datos de forma progresiva.
-- **Escala operativa:** severidades, priorización, escalado y mejora continua.
-- **Escala humana:** trabajo individual o por equipos/roles.
-- **Escala pedagógica:** mayor realismo con incertidumbre controlada y objetivos simultáneos.
-
----
-
-### 8.4. KPI orientado a la reacción del SOC
-
-#### Playbook simplificado asociado al KPI
-
-Documente los pasos que **otro analista** debe seguir cuando el KPI supera el umbral.
-
-Ejemplo:
-
-**Cuando el KPI se activa (>3 eventos):**
-
-1. Verificar el `agent.name` afectado.
-2. Comprobar el usuario que ejecuta `sudo`.
-3. Revisar si la IP origen es conocida.
-4. Correlacionar con:
-
-   * Eventos de autenticación.
-   * Actividad previa (ejecución de comandos).
-5. Clasificar:
-
-   * Falso positivo.
-   * Incidente real.
-
-> Este bloque es clave: convierte el KPI en **tiempo ahorrado**.
-
-### 8.5. Validación del KPI con datos reales
-
-#### Validación en el laboratorio
-
-Utilice los eventos ya generados para:
-
-* Contar cuántas veces se cumple el patrón.
-* Ver si el KPI se activaría.
-* Evaluar si el umbral es razonable.
-
-Documente:
-
-* Número de eventos detectados.
-* Si se habría escalado o no.
-* Qué decisión se tomaría.
-
-### 8.6. Reporte para público no técnico
-
-#### Traducción ejecutiva
-
-Ejemplo de conclusión:
-
-> Se ha definido un indicador que permite detectar de forma temprana intentos de escalada de privilegios en sistemas monitorizados.
-> Este indicador permite reducir el tiempo de análisis, ya que asocia directamente un patrón de comportamiento con una serie de acciones predefinidas, mejorando la capacidad de respuesta del SOC ante accesos no autorizados.
-
----
-
-### Validación / Troubleshooting (si no encuentras eventos suficientes)
-
-* Amplíe el rango temporal en Wazuh (**Last 1 hour / Last 24 hours**).
-* Verifique que filtra por el agente correcto (`agent.name`).
-* Genere de nuevo el evento base (por ejemplo, repetir la acción de `sudo` desde Caldera).
-* Revise qué campos exactos aparecen en tu versión (puede variar entre `full_log`, `message`, `rule.description`).
-
-### Evidencias a entregar
-
-* Evento real usado como base del KPI (captura del evento y detalle).
-* Capturas de filtros en Wazuh.
-* Definición del KPI (nombre, umbral, acción).
-* Ejemplo de activación del KPI (conteo/validación).
-* Playbook simplificado de reacción.
-* Traducción ejecutiva para público no técnico.
-
-### Conclusión final 
-
-Incluya:
-
-* Valor del KPI en un SOC real.
-* Qué problema resuelve.
-* Cómo reduce MTTD / MTTR.
-* Posibles mejoras futuras (automatización, SOAR).
-
----
 
 ## Investigación Opcional — MITRE Caldera (profundización teórico-práctica)
 
@@ -2240,7 +2197,7 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 **Práctica (qué probar)**
 
 * Identificar en la UI: 1 agent, 3 abilities, 1 adversary y 1 planner.
-* Explicar cómo viaja una orden:
+* Explicar en 3–5 líneas cómo viaja una orden:
   *Operation → Planner → Abilities → Agent → Output*.
 * Ejecutar una operación mínima (2–3 abilities) para ver el flujo completo.
 
@@ -2406,7 +2363,7 @@ Actividad opcional para explorar **capacidades avanzadas de MITRE Caldera** que 
 
 **Evidencia**
 
-* Captura del listado + mini ficha del plugin.
+* Captura del listado + mini ficha del plugin (5–8 líneas).
 
 ---
 
@@ -2425,4 +2382,3 @@ Para cada bloque seleccionado, redactar:
 ###### © NICS LAB — NICS | CyberLab
 
 Proyecto experimental para entornos de laboratorio y formación en ciberseguridad.
-
