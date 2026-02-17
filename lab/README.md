@@ -2,8 +2,6 @@
 
 > **Aviso de uso responsable:** todo lo descrito está orientado a un **entorno de laboratorio autorizado y controlado**. No reutilice procedimientos fuera de un contexto permitido.
 
----
-
 ## Índice
 - [Introducción](#introducción)
 - [Visión general de los escenarios](#visión-general-de-los-escenarios)
@@ -2378,4 +2376,4 @@ Para cada bloque seleccionado, redactar:
 
 ###### © NICS LAB — NICS | CyberLab
 
-Proyecto experimental para entornos de laboratorio y formación en ciberseguridad.
+_Proyecto experimental para entornos de laboratorio y formación en ciberseguridad._
