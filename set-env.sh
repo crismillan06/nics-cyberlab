@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================
-# Script para cargar entorno y levantar la red
+# Script para cargar entorno y cargar varibles
 # =============================================
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
