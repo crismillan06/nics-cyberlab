@@ -1,186 +1,355 @@
-# Guía de Despliegue Automatizado - NICS | CyberLab
+# NICS | CyberLab — Guía de uso del repositorio
 
 ### Entorno de Laboratorio Automatizado (Versión Demo)
 
-Este repositorio contiene la versión demo y experimental de **NICS | CyberLab**, un entorno de laboratorio automatizado diseñado para pruebas, formación y experimentación en ciberseguridad.
-El proyecto permite desplegar rápidamente la infraestructura base del laboratorio mediante un único script de instalación y ejecutar módulos adicionales de prueba, como la PoC de **OpenStack + Snort 3**.
+Este repositorio contiene la versión demo y experimental de **NICS | CyberLab**, un entorno de laboratorio automatizado diseñado para pruebas, formación y experimentación en ciberseguridad. El proyecto permite desplegar rápidamente la infraestructura base del laboratorio mediante un único script de instalación y ejecutar módulos adicionales de prueba, como la PoC de **OpenStack + Snort 3**.
+
+**NICS | CyberLab** es un laboratorio automatizado orientado a **capacitación en ciberseguridad**, diseñado para entrenar un flujo realista de un entorno SOC:
+
+**detección → investigación → mejora → reporte**
+
+El repositorio le permite desplegar infraestructura (OpenStack), levantar escenarios por niveles (ej. Level-01: Mini SOC con Snort + Wazuh + Caldera) y dejar trazabilidad completa en logs para documentar evidencias.
+
+> ℹ️ **Nota:** todo lo incluido está pensado para un **entorno de laboratorio autorizado y controlado**. No reutilice técnicas o automatizaciones fuera del contexto permitido.
 
 ---
 
-### Índice
+## Índice
 
-- [Guía de Despliegue Automatizado - NICS | CyberLab](#guía-de-despliegue-automatizado---nics--cyberlab)
-    - [Entorno de Laboratorio Automatizado (Versión Demo)](#entorno-de-laboratorio-automatizado-versión-demo)
-    - [Índice](#índice)
-  - [Introducción](#introducción)
-  - [Estructura del repositorio](#estructura-del-repositorio)
-    - [Requisitos previos](#requisitos-previos)
-  - [🚀 Despliegue automático - `cyberlab.sh`](#-despliegue-automático---cyberlabsh)
-    - [Ejecución:](#ejecución)
-  - [Red virtual persistente - topología creada](#red-virtual-persistente---topología-creada)
-    - [Módulo opcional: **OpenStack + Snort 3 (PoC)**](#módulo-opcional-openstack--snort-3-poc)
-    - [Ejecución:](#ejecución-1)
-  - [Notas resumen](#notas-resumen)
-      - [Ejecutar manualmente el entorno](#ejecutar-manualmente-el-entorno)
-      - [Acceder a OpenStack de forma manul](#acceder-a-openstack-de-forma-manul)
-      - [Levantar la infraestructra de la red](#levantar-la-infraestructra-de-la-red)
-    - [ℹ️ Buenas prácticas](#ℹ️-buenas-prácticas)
-          - [© NICS LAB — NICS | CyberLab](#-nics-lab--nics--cyberlab)
+* [1. Qué ofrece este repositorio](#1-qué-ofrece-este-repositorio)
+* [2. Requisitos mínimos y recomendados](#2-requisitos-mínimos-y-recomendados)
+* [3. Estructura del proyecto](#3-estructura-del-proyecto)
+* [4. Flujo recomendado (Quickstart)](#4-flujo-recomendado-quickstart)
+* [5. Logs y resúmenes (evidencias)](#5-logs-y-resúmenes-evidencias)
+* [6. Scripts principales y para qué sirven](#6-scripts-principales-y-para-qué-sirven)
+* [7. Artefactos generados (deploy/ y admin-openrc.sh)](#7-artefactos-generados-deploy-y-admin-openrcsh)
+* [8. Limpieza del entorno (automática y manual)](#8-limpieza-del-entorno-automática-y-manual)
+* [9. Operación manual y recuperación](#9-operación-manual-y-recuperación)
+* [10. Niveles y ejercicios](#10-niveles-y-ejercicios)
+* [11. Buenas prácticas](#11-buenas-prácticas)
 
 ---
 
-## Introducción
+## 1. Qué ofrece este repositorio
 
-La versión actual del proyecto simplifica por completo el despliegue del laboratorio.
-Ahora **solo necesitas clonar el repositorio y ejecutar un único script**, que se encarga de:
+Este repositorio le permite:
 
-* Instalar dependencias necesarias.
-* Configurar servicios básicos del entorno.
-* Preparar recursos utilizados internamente por el laboratorio.
-* Validar puertos, rutas y configuraciones previas.
-
-Además, se incluye una segunda utilidad opcional para probar la instalación automatizada de **OpenStack + Snort 3**, disponible como PoC dentro del propio repositorio.
+1. Preparar el host y desplegar la base del laboratorio con un único script.
+2. Desplegar OpenStack + recursos (imágenes, redes, flavors, SG, keypair) de forma automatizada.
+3. Levantar escenarios por niveles (por ejemplo `lab/level-01.sh`).
+4. Obtener **logs** y un **resumen final** con datos operativos (IPs/URLs/credenciales).
+5. Limpiar el entorno de forma controlada (desde “solo el nivel” hasta “borrar OpenStack del host”).
 
 ---
 
-## Estructura del repositorio
+## 2. Requisitos mínimos y recomendados
 
-La raíz del proyecto contiene:
+* **Mínimo funcional:** configuración que permite que el laboratorio funcione con fluidez en una máquina local.
+* **Recomendado:** configuración pensada para trabajar con **más estabilidad**, repetir despliegues con frecuencia y disponer de **margen de crecimiento** para niveles y escenarios con más componentes simultáneos.
+
+| Recurso            |                            Mínimo funcional |                                 Recomendado |
+| ------------------ | ------------------------------------------: | ------------------------------------------: |
+| **CPU**            |                                      8 vCPU |                                     16 vCPU |
+| **RAM**            |                                       16 GB |                                       32 GB |
+| **Disco**          |                                  120 GB SSD |                         240–300 GB SSD/NVMe |
+| **Virtualización** | Soportada por CPU y habilitada (AMD-V/VT-x) | Soportada por CPU y habilitada (AMD-V/VT-x) |
+| **SO**             |      Linux 64 bits (Ubuntu 24.04/Debian 12) |      Linux 64 bits (Ubuntu 24.04/Debian 12) |
+| **Red**            |                               NAT funcional |                          Bridge recomendado |
+
+> 💡 **Recomendación:** si su objetivo es desplegar niveles con varias máquinas o repetir prácticas con frecuencia, use el perfil **Recomendado** y disco NVMe.
+
+
+---
+
+## 3. Estructura del proyecto
+
+Tras un despliegue completo, el repositorio queda típicamente así:
 
 ```
-nics-cyberlab-A/
-├── cyberlab.sh              → Instalador principal (entorno base)
-├── op+snort.sh              → PoC opcional: OpenStack + Snort3
-├── openstack-installer/     → Scripts auxiliares internos
-├── static/                  → Recursos del Dashboard (demo)
-├── scenario/                → Escenarios de ejemplo
-├── app.py                   → Backend del Dashboard (modo demo)
-├── *.log                    → Logs generados automáticamente
-└── README.md                → Este documento
+.
+├── admin-openrc.sh
+├── cyberlab.sh
+├── cyberlab-uninstall.sh
+├── deploy/
+│   ├── openstack-install.sh
+│   ├── openstack-resources.sh
+│   ├── setup-veth.sh
+│   ├── uplinkbridge.sh
+│   ├── openstack_venv/
+│   ├── img/
+│   ├── keys/
+│   └── cloud-init/
+├── gui/              # Dashboard (demo de referencia)
+├── inst/             # Operaciones por componente
+├── lab/
+│   ├── level-01.sh
+│   └── README.md
+├── log/
+│   ├── cyberlab.log
+│   ├── dashboard.log
+│   └── level.log
+├── preflight-check.sh
+├── services_restart.sh
+├── set-env.sh
+└── undeploy/
+    ├── level-01-uninstall.sh
+    ├── openstack-resources-uninstall.sh
+    ├── openstack-uninstall.sh
+    ├── uplinkbridge-uninstall.sh
+    ├── admin-openrc_uninstall.sh
+    └── clean-inst.sh
 ```
 
-### Requisitos previos
-
-* Ubuntu 22.04 / 24.04 (recomendado).
-* 4 vCPU y 8 GB RAM (mínimo).
-* 30 GB libres en disco.
-* Acceso a Internet.
-* Usuario con privilegios sudo.
+> ℹ️ **Nota:** la carpeta `log/` se crea tras ejecutar scripts. No aparece en un clonado “en limpio”.
 
 ---
 
-## 🚀 Despliegue automático - `cyberlab.sh`
+## 4. Flujo recomendado (Quickstart)
 
-Este es el script principal del proyecto.
-Realiza toda la preparación del laboratorio de forma completamente automatizada.
+### 4.1) Clonado y comprobación de permisos
 
-### Ejecución:
+Clone el repositorio:
 
 ```bash
-cd nics-cyberlab-A
-chmod +x cyberlab.sh
-./cyberlab.sh
+git clone https://github.com/crismillan06/nics-cyberlab.git
+cd nics-cyberlab
 ```
 
-El script realiza tareas como:
+Compruebe permisos de ejecución. Si ve `x` (ej. `-rwxr-xr-x`), puede omitir cualquier `chmod +x`:
 
-* Instalación y actualización de paquetes necesarios.
-* Configuración básica del entorno.
-* Preparación de directorios y dependencias del dashboard demo.
-* Validaciones automáticas para evitar errores comunes.
-
-Toda la salida del proceso se muestra en pantalla, y en caso de error se genera un log para depuración.
-
-## Red virtual persistente - topología creada
-
-Durante la instalación se configura una red virtual persistente utilizada por OpenStack como red de gestión y red externa.
-
-```
-                ┌────────────┐           ┌──────────────┐
-                │   ens33    │◀────────▶│   Internet   │
-                └────────────┘           └──────────────┘
-                        │
-                  [ NAT / iptables ]
-                        │
-                ┌──────────────────────┐
-                │     uplinkbridge     │
-                └──────────────────────┘
-                        │
-                   ┌────┴────┐
-                   │         │
-              ┌────────┐ ┌────────┐
-              │ veth0  │ │ veth1  │
-              └────────┘ └────────┘
+```bash
+ls -lh *.sh
+ls -lh deploy/*.sh inst/*.sh lab/*.sh gui/*.sh undeploy/*.sh
 ```
 
-- `ens33`: interfaz física principal.  
-- `uplinkbridge`: puente virtual para comunicación externa.  
-- `veth0 / veth1`: par de interfaces virtuales persistentes.  
+Si faltan permisos, aplíquelos una vez:
+
+```bash
+chmod +x *.sh
+chmod +x deploy/*.sh inst/*.sh lab/*.sh gui/*.sh undeploy/*.sh
+```
+
+> 💡 **Recomendación:** aunque un script no sea ejecutable, siempre puede lanzarlo con `bash script.sh`. Aun así, mantener permisos correctos evita errores de “Permission denied”.
 
 ---
 
-### Módulo opcional: **OpenStack + Snort 3 (PoC)**
-
-El repositorio incluye un script adicional que permite experimentar con una instalación automatizada de:
-
-* **OpenStack** (despliegue básico de prueba)
-* **Snort 3** (sensor de IDS/IPS)  
-
-> ⚠️ Este módulo es experimental y está pensado únicamente para pruebas en fase demo.
-
-### Ejecución:
+### 4.2) Despliegue base
 
 ```bash
-chmod +x op+snort.sh
-./op+snort.sh
+bash cyberlab.sh
 ```
 
-El script se encargará del proceso de instalación y mostrará el estado de cada fase durante el despliegue.
+Revise el resumen final:
+
+```bash
+tail -n 120 log/cyberlab.log
+```
+
+> ℹ️ **Nota:** si relanza el despliegue, `cyberlab.sh` puede generar backups tipo `log/cyberlab.log-YYYYMMDD-HHMM.bak`.
 
 ---
 
-## Notas resumen
+### 4.3) Dashboard (demo)
 
-Tras ejecutar `cyberlab.sh`, dentro del directorio **nics-cyberlab-A**:
+Si ya ejecutó `cyberlab.sh`, **no es necesario** lanzar este paso: el dashboard demo se inicia automáticamente en segundo plano.
 
-#### Ejecutar manualmente el entorno
+Si necesita relanzarlo:
 
 ```bash
-source openstack-installer/openstack_venv/bin/activate
+bash gui/start_dashboard.sh
+tail -f log/dashboard.log
+```
+
+> ⚠️ **Advertencia:** `gui/` es una demo de referencia. Útil para pruebas rápidas, pero no forma parte del núcleo operativo del laboratorio.
+
+---
+
+### 4.4) Level-01 (Mini SOC)
+
+```bash
+bash lab/level-01.sh
+tail -n 200 log/level.log
+```
+
+> 💡 **Recomendación:** use `log/level.log` como “salida operativa”: ahí suele tener IPs, URLs y credenciales del escenario.
+
+---
+
+## 5. Logs y resúmenes (evidencias)
+
+La carpeta `log/` se genera tras ejecutar scripts y deja trazabilidad para documentación (tiempos, endpoints y credenciales).
+
+| Fase           | Script                   | Log                 | Qué encontrará                             |
+| -------------- | ------------------------ | ------------------- | ------------------------------------------ |
+| Deploy base    | `cyberlab.sh`            | `log/cyberlab.log`  | Acciones, validaciones y **resumen final** |
+| Dashboard demo | `gui/start_dashboard.sh` | `log/dashboard.log` | Estado/puertos del servicio demo y errores |
+| Nivel          | `lab/level-01.sh`        | `log/level.log`     | Datos operativos del nivel + outputs       |
+
+Búsqueda rápida de fallos típicos:
+
+```bash
+grep -iE "error|fail|fatal|traceback|exception|warn" log/*.log | tail -n 120
+```
+
+> ℹ️ **Nota:** un laboratorio “sano” suele reflejarlo en el resumen final (IPs y endpoints coherentes). Si el resumen está incompleto, empiece por el primer error relevante del log.
+
+---
+
+## 6. Scripts principales y para qué sirven
+
+* **`cyberlab.sh`**: orquesta el despliegue completo y deja resumen en `log/cyberlab.log`.
+* **`preflight-check.sh`**: valida host (recursos, red, virtualización) para evitar fallos repetidos.
+* **`set-env.sh`**: prepara el modo CLI en un paso:
+
+  1. activa `deploy/openstack_venv` (para disponer de `openstack`),
+  2. carga `admin-openrc.sh` (variables `OS_*`).
+* **`services_restart.sh`**: recuperación cuando OpenStack queda en estado inconsistente (servicios/containers caídos).
+* **`inst/`**: operaciones por componente (Snort/Wazuh/Caldera y combinaciones).
+
+  > 💡 **Recomendación:** use `lab/level-01.sh` salvo que esté depurando un componente concreto.
+* **`lab/level-01.sh`**: despliega el “Mini SOC” y consolida salida en `log/level.log`.
+
+---
+
+## 7. Artefactos generados (deploy/ y admin-openrc.sh)
+
+### 7.1) `admin-openrc.sh`
+
+Archivo de variables `OS_*` para autenticación OpenStack.
+
+> ℹ️ **Nota:** el laboratorio se apoya en un **entorno virtual (venv)** para mantener el host limpio y evitar dependencias globales.
+
+Uso manual por pasos:
+
+```bash
+source deploy/openstack_venv/bin/activate
 source admin-openrc.sh
+openstack token issue
+deactivate
 ```
 
-#### Acceder a OpenStack de forma manul
+> 💡 **Recomendación:** use `source set-env.sh` para activar venv y cargar credenciales en un único paso.
+
+### 7.2) Carpeta `deploy/`
+
+* `openstack_venv/` → herramientas OpenStack CLI y dependencias.
+* `img/` → imágenes base descargadas/convertidas.
+* `keys/` → claves (ej. `my_key.pem`) para acceso a instancias.
+* `cloud-init/` → plantillas/credenciales iniciales.
+* `openstack-install.sh` / `openstack-resources.sh` → instalación y creación de recursos.
+* `uplinkbridge.sh` / `setup-veth.sh` → red auxiliar del host (si aplica).
+
+---
+
+## 8. Limpieza del entorno (automática y manual)
+
+### 8.1) Limpieza automática
 
 ```bash
-cat admin-openrc.sh # Fichero generado post ejecución de cyberlab.sh
+bash cyberlab-uninstall.sh
 ```
 
-- ``auth_url`` ➜ Contiene la dirreción con la que está configurado OpenStack, por ejemplo: "http://192.168.5.14".
-- ``username`` ➜ **admin**.
-- ``password`` ➜ Este campo contiene la contraseña generada post instalación, por ejemplo: _570vu8Q1jeZHyaLvVWopdNUBxO7ptYuBXImxLcfZ_
+> 💡 **Recomendación:** use esta opción si su objetivo es volver a un estado limpio sin preocuparse del orden.
 
-También se puede visualizar a través del directorio **/etc/kolla/clouds.yaml**.
+### 8.2) Limpieza manual (orden recomendado)
+
+1. Nivel:
 
 ```bash
-cat /etc/kolla/clouds.yaml
+bash undeploy/level-01-uninstall.sh
 ```
 
-#### Levantar la infraestructra de la red
+2. Recursos OpenStack del stack:
 
 ```bash
-sudo bash openstack-installer/setup-veth.sh
+bash undeploy/openstack-resources-uninstall.sh
 ```
 
-### ℹ️ Buenas prácticas
+3. OpenStack/Kolla/Docker del host:
 
-- Ejecuta siempre los scripts desde la raíz del repositorio.
-- No modifiques rutas internas a menos que sepas exactamente lo que haces.
-- Guarda los logs generados para depuración si ocurre algún error inesperado.
-- Esta versión es experimental: algunas funcionalidades pueden cambiar en futuras actualizaciones.
+```bash
+sudo bash undeploy/openstack-uninstall.sh --safe
+```
+
+4. Red auxiliar/OVS/veth (host “como antes”):
+
+```bash
+sudo bash undeploy/uplinkbridge-uninstall.sh
+```
+
+### 8.3) Limpieza agresiva (casos especiales)
+
+```bash
+bash undeploy/clean-inst.sh --force
+```
+
+> ⚠️ **Advertencia:** `--all-projects` borra instancias en todos los proyectos (solo admin). Úselo únicamente en laboratorio y sabiendo exactamente qué hace.
+
+---
+
+## 9. Operación manual y recuperación
+
+Este apartado le permite **verificar el estado**, **consultar recursos clave** y **reaccionar** si algo no responde, sin depender del despliegue automático.
+
+### 9.1) Preparación (1 comando)
+
+```bash
+source set-env.sh
+```
+
+> ℹ️ **Nota:** si falla, lo más habitual es que falte `deploy/openstack_venv/` o `admin-openrc.sh`.
+
+### 9.2) Comprobación rápida (¿hay acceso?)
+
+```bash
+openstack token issue
+```
+
+* Si devuelve token: **[✓]** credenciales correctas.
+* Si no conecta: revise servicios (siguiente punto).
+
+### 9.3) Lectura rápida del estado
+
+```bash
+openstack server list
+openstack network list
+openstack floating ip list
+```
+
+> 💡 **Recomendación:** si aquí todo es coherente (instancias activas y redes correctas), el nivel suele estar operativo.
+
+### 9.4) Recuperación (2 pasos)
+
+```bash
+bash services_restart.sh
+source set-env.sh
+openstack token issue
+```
+
+> ⚠️ **Advertencia:** si tras reiniciar servicios sigue fallando, revise los logs (especialmente el primer error real, no el efecto cascada).
+
+---
+
+## 10. Niveles y ejercicios
+
+Los ejercicios y el enfoque formativo están documentados en:
+
+📌 **`lab/README.md`**
+
+Actualmente existe **Level-01** enfocado a prácticas SOC; NICS | CyberLab está diseñado para crecer con Level-02/03 y más escenarios.
+
+---
+
+## 11. Buenas prácticas
+
+* Ejecute scripts **desde la raíz** del repositorio.
+* Conserve `log/` como evidencia de práctica.
+* No reutilice automatizaciones fuera de laboratorio.
+* Use `source set-env.sh` para evitar problemas de rutas/venv y credenciales.
+* Realice **snapshot** de la VM antes de cambios grandes.
 
 ---
 
 ###### © NICS LAB — NICS | CyberLab
 
-Proyecto experimental para entornos de laboratorio y formación en ciberseguridad.
+*Proyecto para entornos de laboratorio y formación en ciberseguridad.*
