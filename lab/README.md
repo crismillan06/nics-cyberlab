@@ -48,13 +48,13 @@ Nivel orientado a la **aclimatación y familiarización** con herramientas y tar
     * 2GB de RAM
     * 20GB de Disco
   
-* **Nodo monitor (SIEM/XDR):** Wazuh _v._ (Manager + Dashboard) 
+* **Nodo monitor (SIEM/XDR):** Wazuh _v.4.9.2_ (Manager + Dashboard) 
   * Configuración de recursos _(mínimo requerido)_:
     * 2CPU
     * 4GB de RAM
     * 40GB de Disco
 
-* **Nodo atacante (Adversary Emulation):** MITRE Caldera _v._ 
+* **Nodo atacante (Adversary Emulation):** MITRE Caldera _v.5.3.0-52_ 
   * Configuración de recursos _(mínimo requerido)_:  
     * 1CPU
     * 2GB de RAM
