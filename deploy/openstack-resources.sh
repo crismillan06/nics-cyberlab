@@ -375,7 +375,7 @@ if [ ! -f "$PASS_FILE_SIMPLE" ]; then
 
   cat > "$PASS_FILE_SIMPLE" <<'EOF'
 #cloud-config
-password: soteria7
+password: pandora
 chpasswd: { expire: False }
 ssh_pwauth: True
 EOF
