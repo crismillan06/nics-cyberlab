@@ -55,7 +55,6 @@ Nivel orientado a la **aclimatación y familiarización** con herramientas y tar
     * 2CPU
     * 4GB de RAM
     * 40GB de Disco
-  * S.O: Debian 12
 
 * **Nodo atacante (Adversary Emulation):** MITRE Caldera _v.5.3.0-52_
   * S.O: Debian 12 
