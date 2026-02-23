@@ -53,11 +53,85 @@ Este repositorio le permite:
 | **RAM**            |                                       16 GB |                                       32 GB |
 | **Disco**          |                                  120 GB SSD |                         240–300 GB SSD/NVMe |
 | **Virtualización** | Soportada por CPU y habilitada (AMD-V/VT-x) | Soportada por CPU y habilitada (AMD-V/VT-x) |
-| **SO**             |      Linux 64 bits (Ubuntu 24.04/Debian 12) |      Linux 64 bits (Ubuntu 24.04/Debian 12) |
+| **SO**             |      Linux 64 bits (Ubuntu 24.04) |      Linux 64 bits (Ubuntu 24.04) |
 | **Red**            |                               NAT funcional |                          Bridge recomendado |
 
 > 💡 **Recomendación:** si su objetivo es desplegar niveles con varias máquinas o repetir prácticas con frecuencia, use el perfil **Recomendado** y disco NVMe.
 
+---
+
+### Activación de virtualización anidada (nested VT-x/AMD-V) en Windows 11 con VMware Workstation/Player
+
+Este ajuste se usa cuando necesitas que una VM pueda crear y arrancar otras máquinas dentro. Si esa capacidad no está disponible, lo normal es que las instancias no terminen de arrancar y aparezcan errores del hipervisor. En Windows 11, algunas funciones de virtualización que vienen activadas pueden interferir con VMware y evitar que se pueda activar esta opción; por eso se desactivan antes.
+
+#### **Requisitos previos:**
+
+  1) La máquina virtual debe de estar apagada obligatoriamente.
+
+  2) Virtualización activada en BIOS/UEFI
+
+En Windows 11 puedes comprobarlo así:
+
+* **Administrador de tareas → Rendimiento → CPU → “Virtualización: Habilitada”**
+
+Si aparece “Deshabilitada”, actívalo en BIOS/UEFI (Intel VT-x / AMD-V / SVM).
+
+#### **El bloqueo típico en Windows 11: Hyper-V / VBS / “features” de virtualización**
+
+En algunas instalaciones, Windows deja activadas funciones que **hacen que VMware no pueda usar VT-x “en exclusivo”**, y eso puede impedir que puedas **virtualizar dentro de una VM**.
+
+#### **Desactivar características de Windows (Panel de control):**
+
+1. Abre **Panel de control**
+2. Ve a **Programas → Programas y características**
+3. Busca: **Activar o desactivar las características de Windows**
+4. Desmarca (si están marcadas) estas opciones:
+    * **Hyper-V**
+    * **Plataforma de hipervisor de Windows (Windows Hypervisor Platform)**
+    * **Plataforma de máquina virtual (Virtual Machine Platform)**
+    * **Windows Sandbox** (si aparece)
+    * **Microsoft Defender Application Guard** (si aparece)
+    * **Containers** (si aparece y no lo necesitas)
+    * *(Opcional pero común)* **Subsystem for Linux (WSL)** si estás usando WSL2 (porque suele ir ligado a Virtual Machine Platform)
+
+5. Acepta y **reinicia**.
+
+> ℹ️ **Nota:** si desactivas *Virtual Machine Platform / Hypervisor Platform*, puede dejar de funcionar **WSL2** y otras funciones que dependan de Hyper-V. Es el “precio” habitual para que VMware tenga control total de VT-x y permita nested.
+
+#### **Desactivar “Integridad de memoria” (VBS / Core Isolation):**
+
+Esto también puede interferir en algunos equipos:
+
+1. **Seguridad de Windows**
+2. **Seguridad del dispositivo**
+3. **Aislamiento del núcleo → Detalles**
+4. Desactiva **"Integridad de memoria"**
+5. **Reinicia**
+
+> ℹ️ **Nota:** Si no lo ves, puede estar gestionado por política o el fabricante.
+
+#### **Activar la opción en VMware:**
+
+1. Abre VMware
+2. Selecciona la VM → **Settings** → **Processors**
+3. Marca:  
+   ![alt Virtualize Intel VT-x/EPT or AMD-V/RVI](virtualize.png)  
+   * [✓] **Virtualize Intel VT-x/EPT or AMD-V/RVI**
+4. Acepta y arranca la VM.
+
+#### **Si se reitera el fallo (checklist rápido):**
+
+* ¿La VM está **apagada**?
+* ¿Has reiniciado tras desmarcar features?
+* ¿En **Administrador de tareas** se muestra “Virtualización: Habilitada”?
+* Ejecuta esto para ver si Windows aún detecta hipervisor activo:
+
+  En CMD:
+  ```bat
+  systeminfo | findstr /i "Hyper-V"
+  ```
+
+  Si ves algo así: “**Se detectó un hipervisor**”, entonces Hyper-V/VBS sigue activo (revise lo anterior).
 
 ---
 
@@ -107,6 +181,8 @@ Tras un despliegue completo, el repositorio queda típicamente así:
 ## 4. Flujo recomendado (Quickstart)
 
 ### 4.1) Clonado y comprobación de permisos
+
+> ⚠️ **Advertencia:** *Despliegue evaluado en **Ubuntu 24.04**.*
 
 Clone el repositorio:
 
