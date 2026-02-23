@@ -43,19 +43,23 @@ Nivel orientado a la **aclimatación y familiarización** con herramientas y tar
 #### **Nodos principales**
 
 * **Nodo víctima (IDS):** Snort _v.3.10.2.0_
+  * S.O: Debian 12
   * Configuración de recursos _(mínimo requerido)_:
     * 1CPU
     * 2GB de RAM
     * 20GB de Disco
-  
-* **Nodo monitor (SIEM/XDR):** Wazuh _v.4.9.2_ (Manager + Dashboard) 
+
+* **Nodo monitor (SIEM/XDR):** Wazuh _v.4.9.2_ (Manager + Dashboard)
+  * S.O: Debian 12 
   * Configuración de recursos _(mínimo requerido)_:
     * 2CPU
     * 4GB de RAM
     * 40GB de Disco
+  * S.O: Debian 12
 
-* **Nodo atacante (Adversary Emulation):** MITRE Caldera _v.5.3.0-52_ 
-  * Configuración de recursos _(mínimo requerido)_:  
+* **Nodo atacante (Adversary Emulation):** MITRE Caldera _v.5.3.0-52_
+  * S.O: Debian 12 
+  * Configuración de recursos _(mínimo requerido)_:
     * 1CPU
     * 2GB de RAM
     * 20GB de Disco
